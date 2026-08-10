@@ -34,9 +34,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Action majors are kept current so the runner does not fall back to the deprecated Node 20.
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: pip
@@ -53,14 +54,17 @@ jobs:
       - name: Build offline bundle
         run: OFFLINE=true mkdocs build --strict --site-dir site-offline
 
+      # Only on pull requests and manual runs: on a push, deploy-pages has to pick the
+      # `github-pages` artifact out of this run, and a second artifact is needless ambiguity.
       - name: Attach offline bundle to the build
-        uses: actions/upload-artifact@v4
+        if: github.event_name != 'push'
+        uses: actions/upload-artifact@v7
         with:
           name: handbook-offline
           path: site-offline
           retention-days: 14
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         if: github.event_name != 'pull_request'
         with:
           path: site
@@ -78,4 +82,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
