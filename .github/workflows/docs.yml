@@ -74,10 +74,10 @@ jobs:
       - name: Build offline bundle
         run: OFFLINE=true mkdocs build --strict --site-dir site-offline
 
-      # Only on pull requests and manual runs: on a push, deploy-pages has to pick the
-      # `github-pages` artifact out of this run, and a second artifact is needless ambiguity.
+      # Downloadable zip of the site that works from file:// — the handbook's own docs promise this
+      # on every run, so it is uploaded unconditionally. Safe alongside the Pages artifact because
+      # the deploy job below names the artifact it wants explicitly.
       - name: Attach offline bundle to the build
-        if: github.event_name != 'push'
         uses: actions/upload-artifact@v7
         with:
           name: handbook-offline
@@ -103,3 +103,7 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+        with:
+          # Named explicitly: the build job uploads a second artifact (the offline bundle), and
+          # relying on the default would make which one ships depend on upload order.
+          artifact_name: github-pages

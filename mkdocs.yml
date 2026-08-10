@@ -25,6 +25,17 @@ exclude_docs: |
   check.py
   __pycache__/
 
+# MkDocs logs these at INFO by default, which means `--strict` ignores them: a page left out of the
+# nav is built but unreachable, and a link to a heading that was renamed still resolves to the page
+# and lands the reader at the top. Raising them to `warn` makes `--strict` fail on both.
+validation:
+  nav:
+    omitted_files: warn
+    not_found: warn
+  links:
+    anchors: warn
+    unrecognized_links: warn
+
 theme:
   name: material
   language: en

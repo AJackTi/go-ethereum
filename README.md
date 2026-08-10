@@ -13,6 +13,17 @@ https://pkg.go.dev/badge/github.com/ethereum/go-ethereum
 Automated builds are available for stable releases and the unstable master branch. Binary
 archives are published at https://geth.ethereum.org/downloads/.
 
+### Working on this fork? Start with the developer handbook
+
+*Bạn muốn sửa code trong fork này? Đọc [sổ tay lập trình viên](docs/dev/vi/getting-started.md).*
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** — the code map: what lives where, and the flows everything
+  else hangs off.
+- **[docs/dev/](docs/dev/README.md)** — the developer handbook, English and Vietnamese, readable
+  offline straight from the working tree. Also published at
+  <https://ajackti.github.io/go-ethereum/>.
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — the checks to run before opening a pull request.
+
 ## Building the source
 
 For prerequisites and detailed build instructions please read the [Installation Instructions](https://geth.ethereum.org/docs/getting-started/installing-geth).

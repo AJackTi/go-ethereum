@@ -59,7 +59,7 @@ SECTION_RE = re.compile(r"^## +(.+)$", re.MULTILINE)
 
 
 def markdown_files() -> list[Path]:
-    files = [ROOT / "ARCHITECTURE.md", ROOT / "CONTRIBUTING.md"]
+    files = [ROOT / "README.md", ROOT / "ARCHITECTURE.md", ROOT / "CONTRIBUTING.md"]
     files += sorted(DOCS.rglob("*.md"))
     return [f for f in files if f.is_file()]
 
@@ -152,8 +152,10 @@ def check_links() -> list[str]:
     checked = 0
     for path in markdown_files():
         for text, link in LINK_RE.findall(path.read_text(encoding="utf-8")):
-            if link.startswith(("http://", "https://", "#", "mailto:")):
+            if link.startswith(("http://", "https://", "#", "mailto:", "<")):
                 continue
+            if link.strip() != link or any(c.isspace() for c in link):
+                continue  # a badge or nested image link split over lines, not a path
             checked += 1
             if not resolves(path.parent / link.split("#")[0]):
                 errors.append(f"{rel(path)}: broken link [{text}]({link})")

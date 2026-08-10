@@ -47,6 +47,12 @@ different: prose that still renders perfectly while being wrong.
 The docs workflow's path filter now includes `**.go`, so the check runs on the pull request that
 changes the code rather than on the next documentation edit.
 
+The site build covers what the script cannot. MkDocs logs two failure modes at INFO, where
+`--strict` cannot see them: a page that exists but is absent from the nav, and a link to a heading
+anchor that no longer exists. `mkdocs.yml` raises `validation.nav.omitted_files`,
+`validation.nav.not_found`, `validation.links.anchors` and `validation.links.unrecognized_links` to
+`warn`, which `--strict` turns into build failures.
+
 ## Consequences
 
 - Good: a refactor that moves a documented function fails CI with the exact tour step and pattern

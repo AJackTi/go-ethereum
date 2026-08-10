@@ -128,6 +128,11 @@ Muốn website này trên máy không có mạng? Build bản đóng gói rồi 
 OFFLINE=true mkdocs build     # site/ mở trực tiếp bằng file://
 ```
 
+Hoặc khỏi build luôn: mỗi lần CI chạy đều đính kèm đúng bản đóng gói đó dưới tên artifact
+`handbook-offline`. Mở lần chạy mới nhất ở
+[Actions → docs](https://github.com/AJackTi/go-ethereum/actions/workflows/docs.yml), tải về, giải
+nén, mở `index.html` — đầy đủ website, có cả tìm kiếm, không cần server và không cần mạng.
+
 ---
 
 ## Quy tắc ngôn ngữ

@@ -132,6 +132,11 @@ Want this website on a machine with no connection? Build the self-contained bund
 OFFLINE=true mkdocs build     # site/ opens straight from file://
 ```
 
+Or skip the build entirely: every CI run attaches the same bundle as the `handbook-offline`
+artifact. Open the newest run under
+[Actions → docs](https://github.com/AJackTi/go-ethereum/actions/workflows/docs.yml), download it,
+unzip, open `index.html` — full site, search included, no server and no network.
+
 ---
 
 ## Language policy

@@ -147,6 +147,11 @@ mirrors `en/` file for file and section for section. It runs in CI on every pull
 touches Go code or the handbook — a refactor that moves a function fails there instead of quietly
 rotting a walkthrough.
 
+The site build covers the rest. MkDocs reports a page left out of the nav, and a link to a heading
+that no longer exists, at INFO level — which `--strict` ignores — so `mkdocs.yml` raises both to
+warnings. A new page that nobody linked into the nav, or a renamed heading, now fails the build
+instead of shipping as an unreachable page or a link that silently lands at the top.
+
 Two habits on top of that:
 
 - When a PR moves an entry point or renames a package, update `ARCHITECTURE.md` in the same PR.
