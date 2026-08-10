@@ -50,9 +50,14 @@ empty terminal to a node you can send transactions to. Everything below assumes 
     `ethclient`, `abigen` bindings, a real chain inside your tests, subscriptions — building *on*
     geth rather than changing it.
 
+- :material-puzzle: **[The other subsystems](subsystems.md)**
+
+    GraphQL, ethstats, the log index, era files, telemetry, binary-trie conversion — the parts the
+    six core flows never touch.
+
 - :material-toolbox: **[Tools](tools.md)**
 
-    The thirteen binaries in `cmd/`: `evm`, `devp2p`, `abigen`, `rlpdump`, `era`, `workload` and
+    The twelve binaries in `cmd/`: `evm`, `devp2p`, `abigen`, `rlpdump`, `era`, `workload` and
     the rest.
 
 - :material-translate: **[Glossary](glossary.md)**
@@ -70,7 +75,7 @@ empty terminal to a node you can send transactions to. Everything below assumes 
 
 ## Guided tours inside the editor
 
-Two click-through walkthroughs ship in the repo under
+Seven click-through walkthroughs ship in the repo under
 [`.tours/`](https://github.com/AJackTi/go-ethereum/tree/master/.tours):
 
 | Tour | What it covers |
@@ -81,6 +86,7 @@ Two click-through walkthroughs ship in the repo under
 | **04 · Sync** | CL head → skeleton → concurrent fetchers → snap ranges → heal |
 | **05 · An RPC request** | transport → routing → reflection → `ethapi` → backend → historical state |
 | **06 · State storage** | `SSTORE` → journal → trie → triedb layers → rawdb → pebble and freezer |
+| **07 · Implementing an EIP** | fork schedule → `Rules` → `eips.go` → jump table → gas → spec tests |
 
 Install the VS Code extension `vsls-contrib.codetour` once, open the CodeTour panel, pick a tour.
 After the install it works entirely offline — no service, no model.

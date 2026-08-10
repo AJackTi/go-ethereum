@@ -72,7 +72,8 @@ Cùng đường như trên. Gas nằm ở ba nơi tùy opcode: `gas_table.go` (�
 1. **Đo trước:** `geth --pprof`, rồi `go tool pprof http://localhost:6060/debug/pprof/profile`.
 2. **Nghi phạm quen thuộc:** `core/state/trie_prefetcher.go`, `triedb/pathdb/buffer.go`, đường ghi
    trong `core/blockchain.go`, `eth/protocols/snap` khi đang sync.
-3. **Kiểm chứng:** ghi số liệu trước/sau vào PR; `debug.metrics(false).chain` cho tốc độ nhập block.
+3. **Kiểm chứng:** ghi số liệu trước/sau vào PR; với `--metrics --pprof`,
+   `curl -s localhost:6060/debug/metrics/prometheus | grep '^chain_'` cho thông lượng nhập block.
 
 ---
 
@@ -100,7 +101,7 @@ Lệch `core/forkid` là lý do phổ biến nhất khiến hai node từ chối
 
 ### Đổi luật chấp nhận transaction
 1. **Mở trước:** `core/txpool/validation.go` (kiểm tra dùng chung).
-2. **Chạm theo:** `legacypool/legacypool.go` hoặc `blobpool/blobpool.go` cho giới hạn riêng từng pool.
+2. **Chạm theo:** `core/txpool/legacypool/legacypool.go` hoặc `core/txpool/blobpool/blobpool.go` cho giới hạn riêng từng pool.
 3. **Coi chừng:** luật chặt hơn có thể làm kẹt các tx đã nằm sẵn trong pool sau khi restart.
 
 ---

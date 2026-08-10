@@ -13,7 +13,7 @@ Phần làm quan trọng hơn phần đọc — thứ chỉ đọc thì một tu
 
 - **Đọc:** `README.md`, `cmd/geth/main.go`, `cmd/geth/config.go`, `node/node.go`.
 - **Làm:** `make geth`; chạy `geth --sepolia --syncmode snap --http`; `geth attach` rồi gọi
-  `eth.syncing`, `admin.peers`, `debug.metrics(false)`; sau đó `geth --dev --http` để có chain riêng
+  `eth.syncing`, `admin.peers`, `txpool.status`; sau đó `geth --dev --http` để có chain riêng
   tức thì.
 - **Ghi lại:** danh sách lifecycle được đăng ký lúc khởi động (thêm một dòng log trong
   `node.Node.RegisterLifecycle`).
@@ -69,7 +69,7 @@ Phần làm quan trọng hơn phần đọc — thứ chỉ đọc thì một tu
 ## Tuần 7 — Engine API, miner, txpool (~8h)
 
 - **Đọc:** `eth/catalyst/api.go`, `miner/payload_building.go`, `miner/worker.go`,
-  `core/txpool/txpool.go`, `legacypool/legacypool.go`, `blobpool/blobpool.go`.
+  `core/txpool/txpool.go`, `core/txpool/legacypool/legacypool.go`, `core/txpool/blobpool/blobpool.go`.
 - **Làm:** trên `--dev`, gửi tx bằng `ethclient` và log trọn chu kỳ
   forkchoiceUpdated -> getPayload -> newPayload; soi `txpool_content` khi có nonce nhảy cóc để thấy
   hàng queued.

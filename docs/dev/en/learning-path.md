@@ -13,7 +13,7 @@ The doing matters more than the reading — anything you only read is gone in a 
 
 - **Read:** `README.md`, `cmd/geth/main.go`, `cmd/geth/config.go`, `node/node.go`.
 - **Do:** `make geth`; run `geth --sepolia --syncmode snap --http`; `geth attach` and call
-  `eth.syncing`, `admin.peers`, `debug.metrics(false)`; then `geth --dev --http` for an instant
+  `eth.syncing`, `admin.peers`, `txpool.status`; then `geth --dev --http` for an instant
   private chain.
 - **Write down:** the list of lifecycles registered at startup (add a log line in
   `node.Node.RegisterLifecycle`).
@@ -72,7 +72,7 @@ The doing matters more than the reading — anything you only read is gone in a 
 ## Week 7 — Engine API, miner, txpool (~8h)
 
 - **Read:** `eth/catalyst/api.go`, `miner/payload_building.go`, `miner/worker.go`,
-  `core/txpool/txpool.go`, `legacypool/legacypool.go`, `blobpool/blobpool.go`.
+  `core/txpool/txpool.go`, `core/txpool/legacypool/legacypool.go`, `core/txpool/blobpool/blobpool.go`.
 - **Do:** on `--dev`, send transactions with `ethclient` and log the full
   forkchoiceUpdated -> getPayload -> newPayload cycle; inspect `txpool_content` with a nonce gap
   to see the queued lane.

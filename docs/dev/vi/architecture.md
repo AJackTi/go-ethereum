@@ -92,7 +92,7 @@ Bốn lớp. Khi lạc đường, hỏi: *request này đang ở lớp nào?*
 
 ### Mạng
 - **`p2p`** — peer, dial, mã hóa RLPx, discovery v4/v5, ENR/enode, DNS discovery.
-- **`eth/protocols/eth`** — wire protocol `eth/68`: header, body, receipt, loan tin transaction.
+- **`eth/protocols/eth`** — wire protocol `eth` (bản 69-72 được cài đặt; xem `ProtocolVersions` trong `protocol.go`): header, body, receipt, loan tin transaction.
 - **`eth/protocols/snap`** — tải state theo range, nền tảng của snap sync.
 - **`eth/downloader`** — sync khối lượng lớn (skeleton + backfill). **`eth/fetcher`** — block/tx lẻ
   được loan tin khi đã đồng bộ.
@@ -112,7 +112,7 @@ Bốn lớp. Khi lạc đường, hỏi: *request này đang ở lớp nào?*
 ### Nền tảng và công cụ
 - **`rlp`**, **`common`**, **`crypto`** — mã hóa, `Address`/`Hash`/hexutil, băm và chữ ký.
 - **`accounts`**, **`signer`** — keystore, ví cứng, ABI, Clef.
-- **`cmd/*`** — 12 công cụ khác: `evm`, `devp2p`, `abigen`, `rlpdump`, `era`, `workload`, ...
+- **`cmd/*`** — 11 binary khác: `evm`, `devp2p`, `abigen`, `rlpdump`, `era`, `workload`, ... (`cmd/utils` là thư viện, không phải công cụ).
 - **`tests`** — bộ execution-spec test chính thức. **`internal/build`** + `build/ci.go` — pipeline CI
   bạn phải chạy được ở máy mình.
 
@@ -188,6 +188,8 @@ Checklist đầy đủ trước commit: `AGENTS.md`.
 - Triển khai và vận hành node: [`run-a-node.md`](run-a-node.md)
 - Test, tracer, profiling, delve: [`debugging.md`](debugging.md)
 - Thuật ngữ (Anh ↔ Việt): [`glossary.md`](glossary.md)
+- Hệ thống con ngoài sáu luồng (GraphQL, ethstats, chỉ mục log, era, telemetry): [`subsystems.md`](subsystems.md)
+- Checklist đóng góp: [`../../../CONTRIBUTING.md`](../../../CONTRIBUTING.md)
 - Walkthrough trong editor: [`.tours/`](../../../.tours)
 - Quyết định và lý do: [`../adr/`](../adr)
 - Tài liệu API offline: `go doc ./core/vm` hoặc `pkgsite -http :8080` (xem `../README.md`)

@@ -22,6 +22,7 @@ hooks:
 exclude_docs: |
   README.md
   _hooks.py
+  check.py
   __pycache__/
 
 theme:
@@ -74,9 +75,11 @@ markdown_extensions:
       alternate_style: true
 
 plugins:
-  # lunr has no Vietnamese stemmer, so `vi` falls back to the default tokenizer. Widening the
-  # separator to include the punctuation these pages actually use keeps Vietnamese queries usable;
-  # matching stays literal rather than stemmed.
+  # The i18n plugin adds `vi` to the search languages automatically, and lunr-languages ships a
+  # Vietnamese module (bundled as lunr.vi.min.js) with a Vietnamese trimmer, word-character class
+  # and stop-word list. Vietnamese is isolating, so there is no stemming to do — matching is on
+  # whole words by design. The separator below is widened to the punctuation these pages actually
+  # use (identifiers, paths, backticks) so code-shaped queries tokenise sensibly in both languages.
   - search:
       separator: '[\s​\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;'
   - i18n:
@@ -126,11 +129,13 @@ nav:
       - run-a-node.md
       - using-geth.md
       - tools.md
+      - subsystems.md
   - Decisions (ADR):
       - adr/index.md
       - adr/0001-record-architecture-decisions.md
       - adr/0002-offline-first-bilingual-dev-docs.md
       - adr/0003-publish-handbook-to-github-pages.md
+      - adr/0004-validate-the-handbook-in-ci.md
       - adr/0000-template.md
 
 extra:

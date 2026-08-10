@@ -1,8 +1,9 @@
 # Tools in `cmd/`
 
 > **Language:** English (canonical) · [Tiếng Việt](../vi/tools.md)
-> Thirteen binaries live in `cmd/`. `make all` builds them into `build/bin/`. Most are ways to
-> observe the system from outside, which is exactly what you want while debugging.
+> Twelve binaries live in `cmd/` (the thirteenth directory, `cmd/utils`, is a library). `make all`
+> builds them into `build/bin/`. Most are ways to observe the system from outside, which is exactly
+> what you want while debugging.
 
 ```shell
 make all              # every tool
@@ -82,6 +83,9 @@ Generates typed Go methods for a contract. Usage examples are in
 [Using geth from your own code](using-geth.md). Commit the generated file, like geth commits its
 own `gen_*.go`.
 
+`--v2` emits the newer binding style; without it you get the v1 API (`bind.NewKeyedTransactorWithChainID`,
+`bind.WaitMined`), which is what the examples in this handbook use.
+
 ---
 
 ## rlpdump and abidump — reading bytes
@@ -100,9 +104,11 @@ database content.
 ## ethkey — key files without a node
 
 ```shell
-go run ./cmd/ethkey generate           # new key file
-go run ./cmd/ethkey inspect <file>     # address and public key
+go run ./cmd/ethkey generate                       # new key file
+go run ./cmd/ethkey inspect <file>                 # address and public key
+go run ./cmd/ethkey changepassword <file>          # re-encrypt with a new password
 go run ./cmd/ethkey signmessage <file> <message>
+go run ./cmd/ethkey verifymessage <addr> <sig> <message>
 ```
 
 Operates directly on keystore files. Never point it at a keystore a running node owns.
@@ -152,9 +158,12 @@ go run ./cmd/fetchpayload -rpc http://localhost:8545 <block>
 ```
 
 `fetchpayload` pulls a block plus its execution witness from a node over RPC and writes an
-RLP/JSON payload. `keeper` consumes exactly that payload: it executes the block **statelessly**
-from the witness and checks the computed state and receipt roots against the header — it is built
-to run as a zkvm guest (see `cmd/keeper/README.md`).
+RLP/JSON payload.
+
+`keeper` consumes exactly that payload: it executes the block **statelessly** from the witness and
+checks the computed state and receipt roots against the header — it is built to run as a zkvm guest
+(see `cmd/keeper/README.md`). Note it is a **separate Go module** (`cmd/keeper/go.mod`) built
+through `build/ci.go` with its own build tags, so build it with `make all` rather than `go run`.
 
 Together they are the practical entry point to `core/stateless`.
 

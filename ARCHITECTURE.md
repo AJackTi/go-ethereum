@@ -80,7 +80,7 @@ Four layers. When lost, ask: *which layer is this request in?*
 
 ### Networking
 - **`p2p`** — peers, dialing, RLPx encryption, discovery v4/v5, ENR/enode, DNS discovery.
-- **`eth/protocols/eth`** — the `eth/68` wire protocol: headers, bodies, receipts, transaction announcements.
+- **`eth/protocols/eth`** — the `eth` wire protocol (versions 69-72 are implemented; see `ProtocolVersions` in `protocol.go`): headers, bodies, receipts, transaction announcements.
 - **`eth/protocols/snap`** — range-based state download, the basis of snap sync.
 - **`eth/downloader`** — bulk sync (skeleton + backfill). **`eth/fetcher`** — single announced blocks/txs while synced.
 
@@ -98,7 +98,7 @@ Four layers. When lost, ask: *which layer is this request in?*
 ### Foundation and tools
 - **`rlp`**, **`common`**, **`crypto`** — encoding, `Address`/`Hash`/hexutil, hashing and signatures.
 - **`accounts`**, **`signer`** — keystore, hardware wallets, ABI, Clef.
-- **`cmd/*`** — 12 more tools: `evm`, `devp2p`, `abigen`, `rlpdump`, `era`, `workload`, ...
+- **`cmd/*`** — 11 more binaries: `evm`, `devp2p`, `abigen`, `rlpdump`, `era`, `workload`, ... (`cmd/utils` is a library, not a tool).
 - **`tests`** — the official execution-spec test suite. **`internal/build`** + `build/ci.go` — the CI pipeline you must run locally.
 
 ---
@@ -159,6 +159,8 @@ Full pre-commit checklist: `AGENTS.md`.
 - Deploying and operating a node: [`docs/dev/en/run-a-node.md`](docs/dev/en/run-a-node.md)
 - Tests, tracers, profiling, delve: [`docs/dev/en/debugging.md`](docs/dev/en/debugging.md)
 - Terminology (EN ↔ VI): [`docs/dev/en/glossary.md`](docs/dev/en/glossary.md)
+- Subsystems outside the six flows (GraphQL, ethstats, log index, era, telemetry): [`docs/dev/en/subsystems.md`](docs/dev/en/subsystems.md)
+- Contributing checklist: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - In-editor guided tours: [`.tours/`](.tours)
 - Decisions and their reasons: [`docs/dev/adr/`](docs/dev/adr)
 - Offline API reference: `go doc ./core/vm` or `pkgsite -http :8080` (see `docs/dev/README.md`)

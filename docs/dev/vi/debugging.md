@@ -12,7 +12,7 @@
 | "Thay đổi EVM có đúng đặc tả không?" | `tests/` (execution-spec fixtures) và `cmd/evm statetest` |
 | "Block này thực sự làm gì?" | `debug.traceBlockByNumber`, `debug_traceTransaction` |
 | "Vì sao block bị từ chối?" | `debug.getBadBlocks`, rồi đọc ngược từ `ValidateState` |
-| "Vì sao chậm / ăn RAM?" | `--pprof` + `go tool pprof`, `debug.metrics` |
+| "Vì sao chậm / ăn RAM?" | `--pprof` + `go tool pprof`, endpoint `/debug/metrics` |
 | "Luồng thực thi đi đâu?" | Breakpoint `dlv`, hoặc một dòng `log.Info` tạm |
 | "Trên đĩa đang có gì?" | `geth db inspect`, `geth db get`, `debug.dbGet` |
 
@@ -34,7 +34,8 @@ go run ./build/ci.go lint
 go run ./build/ci.go check_generate
 ```
 
-`-short` bỏ qua các tổ hợp chậm của `tests/` (bộ fixture execution-spec chính thức của Ethereum).
+`-short` bỏ qua các tổ hợp chậm của `tests/` (bộ fixture execution-spec chính thức của Ethereum,
+được tải về `tests/spec-tests/` khi cần).
 Mọi thay đổi ảnh hưởng hành vi consensus đều phải được kiểm bằng lần chạy đầy đủ — đó chính là bộ
 test quyết định node của bạn có đồng thuận với mạng hay không.
 
@@ -114,7 +115,7 @@ geth --pprof --pprof.addr 127.0.0.1 --pprof.port 6060 --metrics
 go tool pprof -http=: http://localhost:6060/debug/pprof/profile?seconds=30   # CPU
 go tool pprof -http=: http://localhost:6060/debug/pprof/heap                 # bộ nhớ
 curl -s localhost:6060/debug/pprof/goroutine?debug=2 | head -50              # goroutine kẹt
-curl -s localhost:6060/debug/metrics/prometheus | grep chain_               # tốc độ nhập block
+curl -s localhost:6060/debug/metrics/prometheus | grep '^chain_'            # tốc độ nhập block
 ```
 
 Profile block và mutex mặc định tắt; chỉ bật khi đang đo:
@@ -133,7 +134,9 @@ debug.setMutexProfileFraction(1)
 go run ./cmd/evm run --debug --code 6001600101
 
 # chạy một fixture state test
-go run ./cmd/evm statetest tests/testdata/GeneralStateTests/…/foo.json
+# fixture không nằm trong repo: `go run ./build/ci.go test` tải chúng về
+# tests/spec-tests/ (bị gitignore)
+go run ./cmd/evm statetest tests/spec-tests/fixtures/state_tests/<…>.json
 
 # đọc RLP bằng mắt
 go run ./cmd/rlpdump <hex>

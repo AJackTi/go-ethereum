@@ -47,9 +47,14 @@ trắng tới một node gửi transaction được. Mọi thứ bên dưới gi
     `ethclient`, binding `abigen`, một chain thật ngay trong test, subscription — xây *trên* geth
     thay vì sửa geth.
 
+- :material-puzzle: **[Các hệ thống con còn lại](subsystems.md)**
+
+    GraphQL, ethstats, chỉ mục log, file era, telemetry, chuyển đổi binary trie — những phần sáu
+    luồng chính không đi qua.
+
 - :material-toolbox: **[Công cụ](tools.md)**
 
-    Mười ba binary trong `cmd/`: `evm`, `devp2p`, `abigen`, `rlpdump`, `era`, `workload` và phần
+    Mười hai binary trong `cmd/`: `evm`, `devp2p`, `abigen`, `rlpdump`, `era`, `workload` và phần
     còn lại.
 
 - :material-translate: **[Thuật ngữ](glossary.md)**
@@ -66,7 +71,7 @@ trắng tới một node gửi transaction được. Mọi thứ bên dưới gi
 
 ## Tour có hướng dẫn ngay trong editor
 
-Hai walkthrough click-through nằm sẵn trong repo tại
+Bảy walkthrough click-through nằm sẵn trong repo tại
 [`.tours/`](https://github.com/AJackTi/go-ethereum/tree/master/.tours):
 
 | Tour | Đi qua cái gì |
@@ -77,6 +82,7 @@ Hai walkthrough click-through nằm sẵn trong repo tại
 | **04 · Đồng bộ** | head từ CL → skeleton → fetcher song song → range snap → heal |
 | **05 · Một request RPC** | transport → định tuyến → reflection → `ethapi` → backend → state lịch sử |
 | **06 · Lưu trữ state** | `SSTORE` → journal → trie → tầng triedb → rawdb → pebble và freezer |
+| **07 · Cài đặt một EIP** | lịch fork → `Rules` → `eips.go` → jump table → gas → spec test |
 
 Cài extension VS Code `vsls-contrib.codetour` một lần, mở panel CodeTour, chọn tour. Sau khi cài
 xong nó chạy hoàn toàn offline — không service, không model.

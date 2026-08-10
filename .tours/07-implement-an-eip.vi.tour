@@ -1,0 +1,81 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "07 · Cài đặt một EIP (VI)",
+  "description": "Đường đi của một thay đổi giao thức trong repo này: lịch fork, rules, jump table, gas, và bộ spec test quyết định bạn làm đúng hay sai.",
+  "steps": [
+    {
+      "title": "Tour này đi qua cái gì",
+      "description": "Đây là walkthrough cho loại thay đổi mà phần lớn pull request ở đây hướng tới: **một EIP làm đổi ngữ nghĩa thực thi**.\n\nThứ tự bên dưới cũng là thứ tự nên viết code. Bỏ qua hai bước đầu là bạn tạo ra một node bất đồng với mạng ở các block lịch sử — kiểu hỏng duy nhất không vá lại được sau này."
+    },
+    {
+      "file": "params/forks/forks.go",
+      "pattern": "type Fork int",
+      "title": "Mỗi fork có một cái tên",
+      "description": "Danh sách có thứ tự các đợt nâng cấp giao thức, từ Frontier tới mới nhất. Ở đây fork chỉ là một số nguyên; giá trị của file này là thứ tự được ghi rõ và so sánh được.\n\nFork mới luôn được nối vào cuối, không bao giờ chèn vào giữa — vì các số này được đem so sánh ở nơi khác."
+    },
+    {
+      "file": "params/config.go",
+      "pattern": "func \\(c \\*ChainConfig\\) IsOsaka\\(",
+      "title": "Fork đã kích hoạt chưa?",
+      "description": "Mỗi fork có một hàm `IsX(num, time)`. Fork sau Merge kích hoạt theo **timestamp**, không theo số block — để ý hình dạng các hàm này.\n\nBản thân thời điểm kích hoạt nằm ở đầu file, mỗi mạng một bộ (mainnet, sepolia, holesky, hoodi). Fork để `nil` ở mạng nào nghĩa là chưa lên lịch ở mạng đó."
+    },
+    {
+      "file": "params/config.go",
+      "pattern": "func \\(c \\*ChainConfig\\) Rules\\(",
+      "title": "Rules: ảnh chụp mà phần thực thi thực sự thấy",
+      "description": "`Rules` gom \"fork nào đang bật ở block này\" thành một struct phẳng, tính một lần mỗi block.\n\nCode EVM không bao giờ gọi thẳng `IsOsaka(...)` trong đường nóng — nó đọc `rules.IsOsaka`. Khi bạn thêm fork, chính struct này và hàm này mang nó vào phần thực thi."
+    },
+    {
+      "file": "params/protocol_params.go",
+      "pattern": "MaxCodeSize\\s+=",
+      "title": "Hằng số tách khỏi logic",
+      "description": "Chi phí gas, giới hạn kích thước và các con số ma thuật khác được khai báo ở đây thay vì viết thẳng trong code, và thường có hậu tố là EIP hoặc fork đã đưa chúng vào (`CallGasFrontier`, `CallGasEIP150`).\n\nGiữ hằng số cũ nằm cạnh hằng số mới là cố ý: chạy lại lịch sử cần cả hai."
+    },
+    {
+      "file": "core/vm/eips.go",
+      "pattern": "var activators = map\\[int\\]func\\(\\*JumpTable\\)",
+      "title": "Một EIP là một hàm biến đổi jump table",
+      "description": "Đây là ý tưởng trung tâm của cả thiết kế: EIP không phải mấy câu `if` rải rác trong interpreter, nó là **một phép biến đổi áp lên bảng lệnh** trước khi thực thi bắt đầu.\n\nMap khóa theo số EIP, nên test và thử nghiệm có thể bật đúng một EIP riêng lẻ."
+    },
+    {
+      "file": "core/vm/eips.go",
+      "pattern": "func enable3855\\(",
+      "title": "Ví dụ cụ thể: PUSH0",
+      "description": "Trọn vẹn EIP-3855: định nghĩa thao tác, chi phí gas, tác động lên stack, rồi ghi vào bảng ở đúng ô của opcode. Khoảng chục dòng.\n\nChép theo hình dạng này. Nếu EIP của bạn đổi một opcode có sẵn thay vì thêm mới, bạn ghi đè ô đó — hành vi riêng theo fork nằm trong bảng, không nằm trong phần cài đặt opcode."
+    },
+    {
+      "file": "core/vm/jump_table.go",
+      "pattern": "func newOsakaInstructionSet\\(",
+      "title": "Fork chồng lên nhau, không rẽ nhánh code",
+      "description": "Bộ lệnh của mỗi fork bắt đầu từ bộ của fork trước rồi áp thay đổi của riêng nó. Đọc vài cái liên tiếp là cả lịch sử giao thức hiện ra như một chuỗi diff.\n\nFork mới nghĩa là thêm một `newXInstructionSet()` ở đây, bắt đầu từ fork liền trước."
+    },
+    {
+      "file": "core/vm/jump_table.go",
+      "pattern": "func validate\\(jt JumpTable\\)",
+      "title": "Bảng bị kiểm tra, không được tin sẵn",
+      "description": "Mọi bảng dựng ra đều đi qua `validate`: mỗi ô phải có hàm thực thi và giới hạn stack nhất quán.\n\nNhờ vậy lỗi kinh điển — thêm opcode với `minStack`/`maxStack` sai — bị bắt ngay lúc khởi động thay vì giữa chừng một block."
+    },
+    {
+      "file": "core/vm/gas_table.go",
+      "pattern": "func gasSStore\\(",
+      "title": "Gas động, khi hằng số không đủ",
+      "description": "Chi phí cố định nằm trong ô của jump table. Chi phí phụ thuộc state hoặc tham số — `SSTORE`, mở rộng bộ nhớ, các thao tác copy — được tính bởi các hàm ở đây.\n\n`gasSStore` đáng đọc một lần bất kể EIP của bạn là gì: nó là nơi nhiều đợt định giá lại trong lịch sử chồng lên nhau, và cho thấy fork gating bên trong một hàm gas trông ra sao."
+    },
+    {
+      "file": "core/state/access_list.go",
+      "pattern": "func newAccessList\\(",
+      "title": "Nếu EIP của bạn đụng warm/cold access",
+      "description": "Sau Berlin, lần truy cập đầu tiên tới một địa chỉ hay storage slot trong một transaction đắt hơn các lần sau. Phần sổ sách đó nằm ở đây và được `core/vm/operations_acl.go` tra cứu.\n\nEIP nào đổi chi phí truy cập đều phải đi qua cả hai chỗ."
+    },
+    {
+      "file": "tests/state_test.go",
+      "pattern": "func TestExecutionSpecState\\(",
+      "title": "Bộ test thực sự quyết định",
+      "description": "Fixture execution-spec chính thức chạy qua đây. Chúng không nằm trong repo — `go run ./build/ci.go test` tải về `tests/spec-tests/` (bị gitignore).\n\nUnit test của bạn chứng minh code làm đúng ý bạn. **Bộ này** chứng minh node của bạn đồng thuận với mọi client khác. Cả hai đều bắt buộc thì thay đổi mới là thật."
+    },
+    {
+      "title": "Checklist, theo thứ tự",
+      "description": "1. Thêm fork vào `params/forks/forks.go` nếu là fork mới.\n2. Thêm config kích hoạt và hàm `IsX` trong `params/config.go`, rồi mang nó vào `Rules`.\n3. Đặt hằng số vào `params/protocol_params.go`, giữ nguyên hằng cũ.\n4. Viết hàm `enableNNNN` trong `core/vm/eips.go`.\n5. Đấu nó vào bộ lệnh của fork trong `core/vm/jump_table.go`.\n6. Thêm gas động ở `core/vm/gas_table.go` nếu chi phí không cố định.\n7. Unit test cạnh package, rồi chạy đủ `go run ./build/ci.go test`.\n8. `go run ./build/ci.go lint` và `check_generate` — đổi struct config thường kéo theo phải sinh lại `gen_*.go`.\n\nBản checklist ở mức công việc, kèm những chỗ khác mà thay đổi lan tới, nằm trong `docs/dev/vi/start-here.md`."
+    }
+  ]
+}

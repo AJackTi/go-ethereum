@@ -158,13 +158,21 @@ eth.syncing            // false = đã đồng bộ; ngược lại so currentBl
 eth.blockNumber        // phải tăng mỗi ~12s khi đã đồng bộ
 admin.peers.length     // bằng 0 quá vài phút là có vấn đề mạng
 admin.nodeInfo.protocols.eth
-debug.metrics(false).chain    // tốc độ nhập block
 txpool.status
 ```
 
-Bật `--metrics` thì node xuất metrics kiểu Prometheus ở
-`http://127.0.0.1:6060/debug/metrics/prometheus`, còn `--pprof` đặt profile Go trên cùng cổng đó.
-Cho Prometheus và Grafana trỏ vào cái đầu; cái thứ hai chỉ dùng khi đang điều tra.
+Thông lượng và số liệu nội bộ lấy từ endpoint metrics, không phải từ console:
+
+```shell
+curl -s localhost:6060/debug/metrics/prometheus | grep '^chain_'   # head, inserts, execution
+curl -s localhost:6060/debug/metrics | head                        # cùng dữ liệu, dạng expvar JSON
+```
+
+!!! note "`--metrics` một mình không mở cổng nào"
+    `--metrics` chỉ bật việc thu thập. Muốn *truy cập* được thì cần thêm `--pprof` (metrics được
+    phục vụ trên chính server pprof, mặc định `127.0.0.1:6060`) hoặc `--metrics.addr` (server
+    metrics riêng). Cho Prometheus và Grafana trỏ vào endpoint đó; `/debug/pprof` trên cùng cổng chỉ
+    dùng khi đang điều tra.
 
 Đọc log: `Imported new potential chain segment` nghĩa là đang bám chain. `Syncing: chain download in
 progress` kèm phần trăm tăng dần là bình thường lúc đầu. Lặp lại `Post-merge network, but no beacon
@@ -206,7 +214,7 @@ Giữ đĩa trong tầm kiểm soát (đều thuộc `state.scheme=path`):
 | Phần trăm sync bò rất chậm ở đoạn cuối | Bình thường với snap sync: pha heal đang vá phần state đã thay đổi trong lúc tải. |
 | Đầy đĩa | `geth db inspect`, rồi dùng các flag history ở trên; chế độ archive thì cắt tỉa không cứu được. |
 | Node tắt mất mấy phút | Đang flush state. Cứ để nó xong. |
-| RPC timeout khi tải nặng | `--cache` quá thấp, đĩa quá chậm, hoặc một truy vấn `eth_getLogs` khoảng quá rộng. Xem `debug.metrics`. |
+| RPC timeout khi tải nặng | `--cache` quá thấp, đĩa quá chậm, hoặc một truy vấn `eth_getLogs` khoảng quá rộng. Xem endpoint metrics. |
 
 ---
 

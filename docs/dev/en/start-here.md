@@ -71,7 +71,8 @@ Same path as above. Gas lives in three places depending on the opcode: `gas_tabl
 1. **Measure first:** `geth --pprof`, then `go tool pprof http://localhost:6060/debug/pprof/profile`.
 2. **Usual suspects:** `core/state/trie_prefetcher.go`, `triedb/pathdb/buffer.go`,
    `core/blockchain.go` write path, `eth/protocols/snap` during sync.
-3. **Verify:** report before/after numbers in the PR; `debug.metrics(false).chain` shows import speed.
+3. **Verify:** report before/after numbers in the PR; with `--metrics --pprof`,
+   `curl -s localhost:6060/debug/metrics/prometheus | grep '^chain_'` shows import throughput.
 
 ---
 
@@ -99,7 +100,7 @@ Mismatched `core/forkid` values are the most common reason two nodes refuse each
 
 ### Change transaction acceptance rules
 1. **Open first:** `core/txpool/validation.go` (shared checks).
-2. **Also touch:** `legacypool/legacypool.go` or `blobpool/blobpool.go` for pool-specific limits.
+2. **Also touch:** `core/txpool/legacypool/legacypool.go` or `core/txpool/blobpool/blobpool.go` for pool-specific limits.
 3. **Watch out:** stricter rules can strand transactions already in the pool across a restart.
 
 ---

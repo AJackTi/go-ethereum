@@ -11,15 +11,25 @@ on:
     branches: [master]
     paths:
       - 'docs/dev/**'
+      - '.tours/**'
       - 'ARCHITECTURE.md'
+      - 'CONTRIBUTING.md'
       - 'mkdocs.yml'
       - '.github/workflows/docs.yml'
+      # Tour anchors and file references point into the Go code, so a code change can break the
+      # handbook. Including Go files here means the breakage surfaces on the PR that caused it.
+      - '**.go'
   pull_request:
     paths:
       - 'docs/dev/**'
+      - '.tours/**'
       - 'ARCHITECTURE.md'
+      - 'CONTRIBUTING.md'
       - 'mkdocs.yml'
       - '.github/workflows/docs.yml'
+      # Tour anchors and file references point into the Go code, so a code change can break the
+      # handbook. Including Go files here means the breakage surfaces on the PR that caused it.
+      - '**.go'
   workflow_dispatch:
 
 permissions:
@@ -46,6 +56,12 @@ jobs:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: docs/dev/requirements.txt
+
+      # Runs before the site build and needs no dependencies: it validates the handbook against the
+      # code (tour anchors, file references, checkout links, en/vi mirror). A refactor that moves a
+      # function fails here instead of silently rotting a walkthrough.
+      - name: Check the handbook against the code
+        run: python3 docs/dev/check.py
 
       - name: Install toolchain
         run: pip install -r docs/dev/requirements.txt

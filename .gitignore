@@ -39,8 +39,12 @@ profile.cov
 .idea
 *.iml
 
-# VS Code
-.vscode
+# VS Code — ignore the contents, not the directory itself: git never descends into an ignored
+# directory, so an exception below it would have no effect.
+.vscode/*
+# ...except the extension recommendations, which point new contributors at the CodeTour
+# walkthroughs in .tours/
+!.vscode/extensions.json
 
 tests/spec-tests/
 

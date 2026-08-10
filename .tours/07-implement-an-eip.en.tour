@@ -1,0 +1,81 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "07 · Implementing an EIP (EN)",
+  "description": "The path a protocol change takes through this repo: fork schedule, rules, jump table, gas, and the spec tests that decide whether you got it right.",
+  "steps": [
+    {
+      "title": "What this tour covers",
+      "description": "This is the walkthrough for the change most pull requests here are about: **an EIP that alters execution semantics**.\n\nThe order below is also the order to write the code in. Skip the first two steps and you will produce a node that disagrees with the network on historical blocks — the one failure mode that cannot be patched later."
+    },
+    {
+      "file": "params/forks/forks.go",
+      "pattern": "type Fork int",
+      "title": "Every fork has a name",
+      "description": "The ordered list of protocol upgrades, Frontier through the newest. A fork is just an integer here; the value of this file is that ordering is explicit and comparable.\n\nA new fork gets appended, never inserted — the numbers are compared elsewhere."
+    },
+    {
+      "file": "params/config.go",
+      "pattern": "func \\(c \\*ChainConfig\\) IsOsaka\\(",
+      "title": "Is the fork active yet?",
+      "description": "Each fork gets an `IsX(num, time)` predicate. Post-merge forks activate by **timestamp**, not block number — note the shape of these functions.\n\nThe activation times themselves are near the top of this file, one set per network (mainnet, sepolia, holesky, hoodi). A fork that is `nil` for a network is simply not scheduled there."
+    },
+    {
+      "file": "params/config.go",
+      "pattern": "func \\(c \\*ChainConfig\\) Rules\\(",
+      "title": "Rules: the snapshot execution actually sees",
+      "description": "`Rules` collapses \"which forks are active at this block\" into one flat struct, computed once per block.\n\nEVM code never asks `IsOsaka(...)` directly in a hot path — it reads `rules.IsOsaka`. When you add a fork, this struct and this function are what carry it into execution."
+    },
+    {
+      "file": "params/protocol_params.go",
+      "pattern": "MaxCodeSize\\s+=",
+      "title": "Constants live apart from logic",
+      "description": "Gas costs, size limits, and other magic numbers are declared here rather than inline, and are usually suffixed with the EIP or fork that introduced them (`CallGasFrontier`, `CallGasEIP150`).\n\nKeeping the old constant next to the new one is deliberate: replaying history needs both."
+    },
+    {
+      "file": "core/vm/eips.go",
+      "pattern": "var activators = map\\[int\\]func\\(\\*JumpTable\\)",
+      "title": "An EIP is a function that mutates the jump table",
+      "description": "This is the central idea of the whole design: an EIP is not an `if` scattered through the interpreter, it is a **transformation applied to the instruction table** before execution begins.\n\nThe map is keyed by EIP number, so `--vm.evm` style experiments and tests can enable one EIP in isolation."
+    },
+    {
+      "file": "core/vm/eips.go",
+      "pattern": "func enable3855\\(",
+      "title": "A concrete example: PUSH0",
+      "description": "EIP-3855 in full: define the operation, its gas cost, its stack effects, and write it into the table at the opcode's slot. About a dozen lines.\n\nCopy this shape. If your EIP changes an existing opcode instead of adding one, you overwrite that entry — the fork-specific behaviour lives in the table, not in the opcode implementation."
+    },
+    {
+      "file": "core/vm/jump_table.go",
+      "pattern": "func newOsakaInstructionSet\\(",
+      "title": "Forks compose, they do not fork the code",
+      "description": "Each fork's instruction set starts from the previous fork's and applies its own changes. Read a few of these in sequence and the whole protocol history reads as a chain of diffs.\n\nA new fork means a new `newXInstructionSet()` here that begins from its predecessor."
+    },
+    {
+      "file": "core/vm/jump_table.go",
+      "pattern": "func validate\\(jt JumpTable\\)",
+      "title": "The table is checked, not trusted",
+      "description": "Every constructed table passes through `validate`: an entry must have an execution function and consistent stack bounds.\n\nThis catches the classic mistake — adding an opcode with wrong `minStack`/`maxStack` — at startup rather than in the middle of a block."
+    },
+    {
+      "file": "core/vm/gas_table.go",
+      "pattern": "func gasSStore\\(",
+      "title": "Dynamic gas, when a constant is not enough",
+      "description": "Constant costs sit in the jump table entry. Costs that depend on state or arguments — `SSTORE`, memory expansion, copy operations — are computed by functions here.\n\n`gasSStore` is worth reading once regardless of your EIP: it is where several historical repricings pile up, and it shows how fork gating looks inside a gas function."
+    },
+    {
+      "file": "core/state/access_list.go",
+      "pattern": "func newAccessList\\(",
+      "title": "If your EIP touches warm/cold access",
+      "description": "Post-Berlin, first access to an address or storage slot in a transaction costs more than later ones. That bookkeeping lives here and is consulted by `core/vm/operations_acl.go`.\n\nAny EIP that changes access costs has to go through both."
+    },
+    {
+      "file": "tests/state_test.go",
+      "pattern": "func TestExecutionSpecState\\(",
+      "title": "The tests that actually decide",
+      "description": "The official execution-spec fixtures run through here. They are not shipped in the repo — `go run ./build/ci.go test` downloads them into `tests/spec-tests/` (git-ignored).\n\nYour own unit tests prove your code does what you meant. **This** suite proves your node agrees with every other client. Both are required before the change is real."
+    },
+    {
+      "title": "The checklist, in order",
+      "description": "1. Add the fork to `params/forks/forks.go` if it is new.\n2. Add activation config and the `IsX` predicate in `params/config.go`, and carry it into `Rules`.\n3. Put constants in `params/protocol_params.go`, keeping the old ones.\n4. Write the `enableNNNN` function in `core/vm/eips.go`.\n5. Wire it into the fork's instruction set in `core/vm/jump_table.go`.\n6. Add dynamic gas in `core/vm/gas_table.go` if the cost is not constant.\n7. Unit tests next to the package, then the full `go run ./build/ci.go test`.\n8. `go run ./build/ci.go lint` and `check_generate` — a changed config struct usually means regenerating `gen_*.go`.\n\nThe task-level version of this list, with the other places a change leaks into, is in `docs/dev/en/start-here.md`."
+    }
+  ]
+}

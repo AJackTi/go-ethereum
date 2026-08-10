@@ -1,0 +1,9 @@
+{
+  // Suggested when the repository is opened. Nothing here is required to build or test geth.
+  "recommendations": [
+    // Plays the guided walkthroughs in .tours/ — the fastest way into this codebase.
+    "vsls-contrib.codetour",
+    // Go language support: gopls, delve debugging, test running.
+    "golang.go"
+  ]
+}

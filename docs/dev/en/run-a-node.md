@@ -159,13 +159,21 @@ eth.syncing            // false = synced; otherwise currentBlock vs highestBlock
 eth.blockNumber        // should climb every ~12s once synced
 admin.peers.length     // 0 for more than a few minutes is a networking problem
 admin.nodeInfo.protocols.eth
-debug.metrics(false).chain    // block import throughput
 txpool.status
 ```
 
-With `--metrics` the node exposes Prometheus-compatible metrics on `http://127.0.0.1:6060/debug/metrics/prometheus`,
-and `--pprof` puts Go profiles on the same port. Point Prometheus and Grafana at the first; use the
-second only when investigating.
+Throughput and internals come from the metrics endpoint, not the console:
+
+```shell
+curl -s localhost:6060/debug/metrics/prometheus | grep '^chain_'   # head, inserts, execution
+curl -s localhost:6060/debug/metrics | head                        # same data as expvar JSON
+```
+
+!!! note "`--metrics` alone opens no port"
+    `--metrics` turns collection on. To *reach* it you need either `--pprof` (metrics are served on
+    the pprof server, `127.0.0.1:6060` by default) or `--metrics.addr` (a standalone metrics
+    server). Point Prometheus and Grafana at that endpoint; `/debug/pprof` on the same port is for
+    investigation only.
 
 Reading the logs: `Imported new potential chain segment` means you are following the chain.
 `Syncing: chain download in progress` with a rising percentage is normal early on. Repeated
@@ -207,7 +215,7 @@ database directory — stop the node first, or you will copy a torn state.
 | Sync percentage crawls near the end | Normal for snap sync: the heal phase repairs state that moved while downloading. |
 | Disk fills up | `geth db inspect`, then history flags above; archive mode is not fixable by pruning. |
 | Node stops during shutdown for minutes | Flushing state. Let it finish. |
-| RPC times out under load | `--cache` too low, disk too slow, or a heavy `eth_getLogs` range. Check `debug.metrics`. |
+| RPC times out under load | `--cache` too low, disk too slow, or a heavy `eth_getLogs` range. Check the metrics endpoint. |
 
 ---
 

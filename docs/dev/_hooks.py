@@ -39,6 +39,8 @@ ARCHITECTURE_REWRITES = [
     ("docs/dev/en/run-a-node.md", "run-a-node.md"),
     ("docs/dev/en/debugging.md", "debugging.md"),
     ("docs/dev/en/glossary.md", "glossary.md"),
+    ("docs/dev/en/subsystems.md", "subsystems.md"),
+    ("CONTRIBUTING.md", GITHUB_BLOB + "/CONTRIBUTING.md"),
     ("docs/dev/adr/", "../adr/index.md"),
     ("docs/dev/adr", "../adr/index.md"),
     ("docs/dev/README.md", "index.md"),
@@ -54,6 +56,7 @@ PAGE_REWRITES = [
     ("../../../AGENTS.md", GITHUB_BLOB + "/AGENTS.md"),
     ("../../../README.md", GITHUB_BLOB + "/README.md"),
     ("../README.md", "index.md"),
+    ("../../../CONTRIBUTING.md", GITHUB_BLOB + "/CONTRIBUTING.md"),
     ("../adr", "../adr/index.md"),
 ]
 

@@ -68,7 +68,7 @@
 | **Bootnode** | nút khởi điểm | Node đã biết trước, dùng để tìm những peer đầu tiên. | `params/bootnodes.go` |
 | **enode / ENR** | — | Địa chỉ của một node và bản ghi có chữ ký về năng lực của nó. | `p2p/enode`, `p2p/enr` |
 | **forkid** | — | Dấu vân tay fork trao đổi lúc handshake để peer không tương thích tự ngắt. | `core/forkid/` |
-| **eth/68** | — | Wire protocol cho block, transaction và receipt. | `eth/protocols/eth` |
+| **eth/69 … eth/72** | — | Wire protocol cho block, transaction và receipt; các bản node này cài đặt liệt kê trong `ProtocolVersions`. | `eth/protocols/eth/protocol.go` |
 | **snap** | — | Giao thức tải state theo range thay vì từng node một. | `eth/protocols/snap` |
 | **Snap sync** | đồng bộ nhanh | Tải thẳng state gần đây rồi bám theo chain. Mặc định. | `--syncmode snap` |
 | **Full sync** | đồng bộ đầy đủ | Chạy lại mọi block từ genesis. Chậm, kiểm chứng tối đa. | `--syncmode full` |

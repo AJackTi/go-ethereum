@@ -12,7 +12,7 @@
 | "Is my EVM change correct per spec?" | `tests/` (execution-spec fixtures) and `cmd/evm statetest` |
 | "What does this block actually do?" | `debug.traceBlockByNumber`, `debug_traceTransaction` |
 | "Why is this block rejected?" | `debug.getBadBlocks`, then read backwards from `ValidateState` |
-| "Why is it slow / eating RAM?" | `--pprof` + `go tool pprof`, `debug.metrics` |
+| "Why is it slow / eating RAM?" | `--pprof` + `go tool pprof`, the `/debug/metrics` endpoint |
 | "Where does execution actually go?" | `dlv` breakpoints, or a temporary `log.Info` |
 | "What is on disk?" | `geth db inspect`, `geth db get`, `debug.dbGet` |
 
@@ -34,7 +34,8 @@ go run ./build/ci.go lint
 go run ./build/ci.go check_generate
 ```
 
-`-short` skips the slow permutations of `tests/` (the official Ethereum execution-spec fixtures).
+`-short` skips the slow permutations of `tests/` (the official Ethereum execution-spec fixtures,
+downloaded on demand into `tests/spec-tests/`).
 Anything that changes consensus behaviour must be validated by the full run — that is the suite
 that decides whether your node agrees with the network.
 
@@ -114,7 +115,7 @@ geth --pprof --pprof.addr 127.0.0.1 --pprof.port 6060 --metrics
 go tool pprof -http=: http://localhost:6060/debug/pprof/profile?seconds=30   # CPU
 go tool pprof -http=: http://localhost:6060/debug/pprof/heap                 # memory
 curl -s localhost:6060/debug/pprof/goroutine?debug=2 | head -50              # stuck goroutines
-curl -s localhost:6060/debug/metrics/prometheus | grep chain_               # import speed
+curl -s localhost:6060/debug/metrics/prometheus | grep '^chain_'            # import speed
 ```
 
 Block and mutex profiles are off by default; turn them on only while measuring:
@@ -133,7 +134,9 @@ debug.setMutexProfileFraction(1)
 go run ./cmd/evm run --debug --code 6001600101
 
 # execute a state test fixture
-go run ./cmd/evm statetest tests/testdata/GeneralStateTests/…/foo.json
+# fixtures are not in the repo: `go run ./build/ci.go test` downloads them into
+# tests/spec-tests/ (git-ignored)
+go run ./cmd/evm statetest tests/spec-tests/fixtures/state_tests/<…>.json
 
 # decode RLP by eye
 go run ./cmd/rlpdump <hex>

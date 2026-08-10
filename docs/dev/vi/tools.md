@@ -1,8 +1,8 @@
 # Công cụ trong `cmd/`
 
 > **Ngôn ngữ:** Tiếng Việt · [English (bản gốc)](../en/tools.md)
-> Có mười ba binary trong `cmd/`. `make all` build hết vào `build/bin/`. Phần lớn là cách quan sát
-> hệ thống từ bên ngoài — đúng thứ bạn cần khi debug.
+> Có mười hai binary trong `cmd/` (thư mục thứ mười ba, `cmd/utils`, là thư viện). `make all` build
+> hết vào `build/bin/`. Phần lớn là cách quan sát hệ thống từ bên ngoài — đúng thứ bạn cần khi debug.
 
 ```shell
 make all              # tất cả công cụ
@@ -82,6 +82,9 @@ Sinh ra method Go có kiểu cho contract. Ví dụ sử dụng nằm ở
 [Dùng geth từ code của bạn](using-geth.md). Commit file sinh ra, giống cách geth commit các file
 `gen_*.go` của chính nó.
 
+`--v2` sinh binding kiểu mới; không có cờ đó thì ra API v1 (`bind.NewKeyedTransactorWithChainID`,
+`bind.WaitMined`) — chính là API các ví dụ trong sổ tay này dùng.
+
 ---
 
 ## rlpdump và abidump — đọc byte
@@ -100,9 +103,11 @@ nội dung database.
 ## ethkey — thao tác file khóa không cần node
 
 ```shell
-go run ./cmd/ethkey generate           # tạo file khóa mới
-go run ./cmd/ethkey inspect <file>     # xem address và public key
+go run ./cmd/ethkey generate                       # tạo file khóa mới
+go run ./cmd/ethkey inspect <file>                 # xem address và public key
+go run ./cmd/ethkey changepassword <file>          # mã hóa lại bằng mật khẩu mới
 go run ./cmd/ethkey signmessage <file> <message>
+go run ./cmd/ethkey verifymessage <addr> <sig> <message>
 ```
 
 Làm việc trực tiếp trên file keystore. Đừng trỏ nó vào keystore mà một node đang chạy sở hữu.
@@ -152,9 +157,12 @@ go run ./cmd/fetchpayload -rpc http://localhost:8545 <block>
 ```
 
 `fetchpayload` kéo một block cùng execution witness của nó từ node qua RPC rồi ghi ra payload
-RLP/JSON. `keeper` tiêu thụ đúng payload đó: nó thực thi block **stateless** từ witness và đối chiếu
-state root cùng receipt root tính được với header — được viết để chạy như một zkvm guest (xem
-`cmd/keeper/README.md`).
+RLP/JSON.
+
+`keeper` tiêu thụ đúng payload đó: nó thực thi block **stateless** từ witness và đối chiếu state
+root cùng receipt root tính được với header — được viết để chạy như một zkvm guest (xem
+`cmd/keeper/README.md`). Lưu ý nó là một **Go module riêng** (`cmd/keeper/go.mod`), build qua
+`build/ci.go` với build tag riêng, nên hãy dùng `make all` chứ đừng `go run`.
 
 Hai cái ghép lại chính là cửa vào thực tế của `core/stateless`.
 

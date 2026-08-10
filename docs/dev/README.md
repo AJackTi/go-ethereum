@@ -19,7 +19,8 @@ trong cây mã, đọc bằng editor nào cũng được.
 | Deploy and operate a node | [`en/run-a-node.md`](en/run-a-node.md) | [`vi/run-a-node.md`](vi/run-a-node.md) |
 | Tests, tracers, pprof, delve | [`en/debugging.md`](en/debugging.md) | [`vi/debugging.md`](vi/debugging.md) |
 | Build *on* geth (ethclient, abigen) | [`en/using-geth.md`](en/using-geth.md) | [`vi/using-geth.md`](vi/using-geth.md) |
-| The 13 tools in `cmd/` | [`en/tools.md`](en/tools.md) | [`vi/tools.md`](vi/tools.md) |
+| The 12 binaries in `cmd/` | [`en/tools.md`](en/tools.md) | [`vi/tools.md`](vi/tools.md) |
+| GraphQL, ethstats, log index, era, telemetry | [`en/subsystems.md`](en/subsystems.md) | [`vi/subsystems.md`](vi/subsystems.md) |
 | Terminology, EN ↔ VI | [`en/glossary.md`](en/glossary.md) | [`vi/glossary.md`](vi/glossary.md) |
 | Why things are the way they are | [`adr/`](adr) | [`adr/`](adr) (English only) |
 | Guided walkthrough in the editor | [`../../.tours/`](../../.tours) | [`../../.tours/`](../../.tours) |
@@ -111,8 +112,8 @@ walkthrough inside VS Code — offline, no service, no AI.
 2. Open the CodeTour panel in the Explorer sidebar and pick a tour.
 3. `Ctrl/Cmd+Right` walks forward; each step jumps to the exact code and explains it.
 
-Tours in this repo are suffixed by language: `*.en.tour`, `*.vi.tour`. Six flows are covered, each
-in both languages:
+Tours in this repo are suffixed by language: `*.en.tour`, `*.vi.tour`. Seven flows are covered,
+each in both languages:
 
 | Tour | Path it walks |
 | --- | --- |
@@ -122,6 +123,7 @@ in both languages:
 | 04 · Sync | CL head → skeleton → concurrent fetchers → snap ranges → heal |
 | 05 · An RPC request | transport → routing → reflection → `ethapi` → backend → state |
 | 06 · State storage | `SSTORE` → journal → trie → triedb layers → rawdb → pebble/freezer |
+| 07 · Implementing an EIP | fork schedule → `Rules` → `eips.go` → jump table → gas → spec tests |
 
 **Steps use `pattern` (a regex), not `line`.** That is deliberate: line numbers rot with every
 refactor, regexes on function signatures do not. Keep it that way when you add steps.
@@ -133,7 +135,19 @@ JSON for you. Then swap any `line` fields for `pattern`.
 
 ## Keeping this honest
 
-The handbook is only useful if it is true. Two habits:
+The handbook is only useful if it is true, so the claims are checked mechanically:
+
+```shell
+python3 docs/dev/check.py        # no dependencies, runs in seconds
+```
+
+Four checks: every tour step's regex still matches the code it points at, every code path
+mentioned in backticks exists, every relative link resolves in a plain checkout, and the `vi/` tree
+mirrors `en/` file for file and section for section. It runs in CI on every pull request that
+touches Go code or the handbook — a refactor that moves a function fails there instead of quietly
+rotting a walkthrough.
+
+Two habits on top of that:
 
 - When a PR moves an entry point or renames a package, update `ARCHITECTURE.md` in the same PR.
 - Verify a claim before trusting it: `grep -n "func (bc \*BlockChain) InsertChain" core/blockchain.go`.
