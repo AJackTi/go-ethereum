@@ -1,0 +1,57 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "01 · Node startup (EN)",
+  "description": "From `geth` on the command line to a running node with peers and RPC. Start here if you have never opened this repo before.",
+  "steps": [
+    {
+      "title": "What this tour covers",
+      "description": "You will follow one path: **command line -> config -> node container -> Ethereum backend -> running services**.\n\nThat path answers the question \"where does anything start?\". Every other flow in this repo hangs off the objects built here.\n\nSteps are anchored by regex on function signatures, not line numbers, so this tour survives refactors.\n\nNext: press the arrow to jump into the CLI entry point."
+    },
+    {
+      "file": "cmd/geth/main.go",
+      "pattern": "func geth\\(ctx \\*cli\\.Context\\) error",
+      "title": "CLI entry point",
+      "description": "`geth()` is the default action when you run the binary with no subcommand.\n\nIt does three things: build the node, register the services, start everything. Notice how little logic lives here — `cmd/geth` is a thin shell around `node` and `eth`.\n\nEvery flag you can pass is declared in `cmd/utils/flags.go`."
+    },
+    {
+      "file": "cmd/geth/config.go",
+      "pattern": "func makeFullNode",
+      "title": "Where the node is assembled",
+      "description": "`makeFullNode` is the real wiring point: it turns flags plus the TOML config into a `*node.Node` with every service registered.\n\nRead the calls in order — each one registers a subsystem (the Ethereum backend, the Engine API, GraphQL, ethstats, ...). If you ever wonder \"is feature X enabled by default?\", the answer is in this function."
+    },
+    {
+      "file": "node/node.go",
+      "pattern": "func New\\(conf \\*Config\\) \\(\\*Node, error\\)",
+      "title": "The process container",
+      "description": "`node.Node` owns everything a process needs and nothing about Ethereum itself: the data directory, the key store, the p2p server, and the RPC endpoints.\n\nIt knows how to start and stop a list of `Lifecycle` objects in the right order. That is the extension point — `eth.Ethereum` is just one lifecycle among several."
+    },
+    {
+      "file": "eth/backend.go",
+      "pattern": "func New\\(stack \\*node\\.Node, config \\*ethconfig\\.Config\\)",
+      "title": "The Ethereum backend — the biggest function you should read",
+      "description": "This is where the chain actually comes together. Scroll through the whole function once, slowly. In order it builds:\n\n- the chain database (plus the freezer for old blocks)\n- the genesis / chain config\n- `core.BlockChain`\n- the transaction pools (legacy + blob)\n- the p2p handler (protocols `eth` and `snap`, downloader, fetchers)\n- the miner (payload building)\n- the API backends\n\nIf you know what each of those is, you know geth. Everything else is detail."
+    },
+    {
+      "file": "eth/catalyst/api.go",
+      "pattern": "func Register\\(stack \\*node\\.Node, backend \\*eth\\.Ethereum\\) error",
+      "title": "The Engine API is registered here",
+      "description": "This registers the `engine_*` namespace on the authenticated port (8551, JWT protected).\n\nAfter the Merge this is how a node learns which chain is canonical: the consensus client calls in, geth obeys. Nothing inside geth chooses the head on its own.\n\nTour 02 follows what happens when a payload arrives through this door."
+    },
+    {
+      "file": "node/node.go",
+      "pattern": "func \\(n \\*Node\\) Start\\(\\) error",
+      "title": "Everything starts here",
+      "description": "`Start` opens the network endpoints, then starts every registered lifecycle in registration order. Failure anywhere unwinds the ones already started.\n\nThis ordering is why registration order in `makeFullNode` matters."
+    },
+    {
+      "file": "cmd/geth/main.go",
+      "pattern": "func startNode",
+      "title": "And then it waits",
+      "description": "After starting, `startNode` unlocks accounts if asked, wires up the console, and blocks until interrupted.\n\nFrom this moment on the process is event driven: p2p messages, RPC calls, and Engine API commands drive everything."
+    },
+    {
+      "title": "Where to go next",
+      "description": "You have seen the skeleton. Pick the flow you actually care about:\n\n- **Tour 02 — Block import**: what happens when a block arrives.\n- `ARCHITECTURE.md` at the repo root: the full code map and the six core flows.\n- `docs/dev/en/start-here.md`: \"I want to change X, where do I start?\"\n\nTip: `go doc ./eth` and `go doc ./node` render package docs offline in the terminal."
+    }
+  ]
+}

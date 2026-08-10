@@ -1,0 +1,87 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "02 · Nhập block (VI)",
+  "description": "Một block, từ lời gọi `engine_newPayload` của consensus client cho tới byte trên đĩa. Đường quan trọng nhất trong repo này.",
+  "steps": [
+    {
+      "title": "Tour này đi qua cái gì",
+      "description": "Một block tới. Mười bước sau nó hoặc thành head mới, hoặc bị từ chối vì không hợp lệ.\n\nĐây là đường mà mọi consensus bug trú ngụ, và cũng là đường phần lớn pull request đụng vào. Đi chậm thôi.\n\nNên làm **Tour 01 — Khởi động node** trước để quen mặt các object ở đây."
+    },
+    {
+      "file": "eth/catalyst/api.go",
+      "pattern": "func \\(api \\*ConsensusAPI\\) newPayload\\(",
+      "title": "Block đi vào qua Engine API",
+      "description": "Consensus client đưa cho ta một payload và hỏi: cái này hợp lệ không?\n\nTrước khi thực thi bất cứ thứ gì, geth kiểm tra block cha. Nếu chưa có, câu trả lời là `SYNCING` và sync được kích hoạt thay vì thực thi — đó là nhánh khởi động downloader.\n\nNgược lại, payload được chuyển thành `types.Block` rồi đẩy vào chain."
+    },
+    {
+      "file": "core/blockchain.go",
+      "pattern": "func \\(bc \\*BlockChain\\) InsertChain",
+      "title": "InsertChain — cửa công khai",
+      "description": "Điểm vào được export. Nó nhận một slice block, kiểm tra chúng liền mạch, rồi giao cho `insertChain` (không export).\n\nBlock cũng tới đây từ sync và từ `fetcher` — Engine API không phải nơi gọi duy nhất."
+    },
+    {
+      "file": "core/blockchain.go",
+      "pattern": "func \\(bc \\*BlockChain\\) insertChain",
+      "title": "insertChain — phần việc thật",
+      "description": "Hàm dài. Đọc theo ba phần:\n\n1. **Định vị** — block cha là head hiện tại, một tổ tiên đã biết, hay thuộc nhánh khác? Logic reorg bắt đầu ở đây.\n2. **Vòng lặp** — với mỗi block: verify, execute, validate, write.\n3. **Sổ sách** — sự kiện, metric, và trạng thái đầu chain.\n\nGần như mọi báo cáo \"bad block\" đều được chẩn đoán bên trong hàm này."
+    },
+    {
+      "file": "core/block_validator.go",
+      "pattern": "func \\(v \\*BlockValidator\\) ValidateBody",
+      "title": "Kiểm tra rẻ tiền trước",
+      "description": "Trước khi tốn CPU thực thi, geth kiểm tra những gì xác minh được chỉ từ bản thân block: transaction root, luật uncle/withdrawal, giới hạn blob.\n\nXác minh header (độ khó, gas limit, base fee, timestamp) đi qua `consensus.Engine` — sau Merge chính là `consensus/beacon`."
+    },
+    {
+      "file": "core/state_processor.go",
+      "pattern": "func \\(p \\*StateProcessor\\) Process",
+      "title": "Thực thi: state transition",
+      "description": "Trái tim của client. Thứ tự rất quan trọng và nên thuộc:\n\n1. **System call trước thực thi** — contract beacon root và parent block hash.\n2. **Từng transaction, theo thứ tự** — tất cả áp lên cùng một `StateDB`.\n3. **Sau thực thi** — hàng đợi withdrawal, consolidation, deposit request.\n\nĐầu ra là danh sách receipt, gas đã dùng, và log — đúng những thứ header tuyên bố."
+    },
+    {
+      "file": "core/state_processor.go",
+      "pattern": "func ApplyTransactionWithEVM",
+      "title": "Một transaction",
+      "description": "Với mỗi tx: dựng message, chụp snapshot state, chạy, rồi dựng receipt.\n\nSnapshot chính là thứ khiến một transaction thất bại trở nên vô hại — state quay lui nhưng gas vẫn bị trừ, và receipt ghi lại thất bại đó."
+    },
+    {
+      "file": "core/vm/evm.go",
+      "pattern": "func \\(evm \\*EVM\\) Call\\(",
+      "title": "Bước vào EVM",
+      "description": "`Call` lo chuyển value, precompile, và luật gas 63/64 cho call lồng nhau. Đây cũng là chỗ áp giới hạn depth.\n\nCác anh em của nó — `CallCode`, `DelegateCall`, `StaticCall`, `Create` — nằm ngay bên dưới, khác nhau chủ yếu ở chỗ giữ lại context nào."
+    },
+    {
+      "file": "core/vm/interpreter.go",
+      "pattern": "func \\(evm \\*EVM\\) Run\\(",
+      "title": "Vòng lặp opcode",
+      "description": "Đây là toàn bộ máy ảo: lấy opcode, tra bảng jump table, trừ gas, thực thi, lặp lại tới khi gặp STOP, RETURN, REVERT hoặc lỗi.\n\nMọi thứ EVM làm được đều là một dòng trong `jump_table.go`. Khác biệt giữa các fork được áp lên bảng đó bởi `eips.go` — vì vậy fork gating là sửa bảng, không phải thêm `if` trong vòng lặp."
+    },
+    {
+      "file": "core/block_validator.go",
+      "pattern": "func \\(v \\*BlockValidator\\) ValidateState",
+      "title": "Khoảnh khắc quyết định",
+      "description": "Giờ geth so cái nó tính được với cái block tuyên bố: state root, receipt root, gas used, logs bloom.\n\n**Đây là nơi consensus bug lộ diện.** Nếu state root không khớp, sai sót đã xảy ra đâu đó trong lúc thực thi — hãy đọc ngược lại từ đây."
+    },
+    {
+      "file": "core/blockchain.go",
+      "pattern": "func \\(bc \\*BlockChain\\) writeBlockAndSetHead",
+      "title": "Chấp nhận block",
+      "description": "Block hợp lệ nên được ghi xuống và (thường là) trở thành head mới. Nếu block thuộc nhánh khác thì reorg diễn ra ở đây.\n\nSau đó một `ChainHeadEvent` được phát ra — chỉ một sự kiện đó làm reset transaction pool, đánh thức miner, và nuôi các log filter."
+    },
+    {
+      "file": "core/state/statedb.go",
+      "pattern": "func \\(s \\*StateDB\\) Commit\\(",
+      "title": "State rời khỏi bộ nhớ",
+      "description": "`Commit` đẩy các account và storage bẩn vào trie, tính root cuối cùng, và tạo ra tập node cần lưu.\n\nPhía trên dòng này, state revert được. Phía dưới thì không."
+    },
+    {
+      "file": "triedb/database.go",
+      "pattern": "func \\(db \\*Database\\) Update\\(",
+      "title": "Và hạ cánh xuống trie database",
+      "description": "`triedb` nhận các node mới và xếp chúng lên trên state root trước đó — dưới dạng diff layer trong `pathdb` (mặc định), hoặc node có đếm tham chiếu trong `hashdb`.\n\nMãi về sau, khi các tầng được flush, đám byte này mới tới `ethdb/pebble` thông qua sơ đồ khóa trong `core/rawdb`."
+    },
+    {
+      "title": "Bạn đã đi hết đường",
+      "description": "Engine API -> InsertChain -> validate -> execute -> validate lần nữa -> write -> trie -> đĩa.\n\nĐi tiếp:\n\n- `docs/dev/vi/architecture.md` — năm luồng còn lại (vòng đời transaction, sync, RPC, lưu state, vòng lặp CL).\n- `docs/dev/vi/learning-path.md` — tuần 4 biến tour này thành bài tập.\n- Thử tay: viết test dùng `core/chain_makers.go`, cố tình sửa sai một state root, và xem bước 10 từ chối nó."
+    }
+  ]
+}

@@ -57,3 +57,11 @@ cmd/geth/geth
 cmd/rlpdump/rlpdump
 cmd/workload/workload
 cmd/keeper/keeper
+
+# developer handbook website (mkdocs.yml + docs/dev)
+/site/
+/site-offline/
+/.venv/
+docs/dev/__pycache__/
+# generated at build time from the repo-root ARCHITECTURE.md — edit that file, not this copy
+docs/dev/en/architecture.md

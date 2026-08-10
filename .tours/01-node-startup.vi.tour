@@ -1,0 +1,57 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "01 · Khởi động node (VI)",
+  "description": "Từ lệnh `geth` trên terminal tới một node đang chạy có peer và RPC. Bắt đầu ở đây nếu bạn chưa từng mở repo này.",
+  "steps": [
+    {
+      "title": "Tour này đi qua cái gì",
+      "description": "Bạn sẽ đi theo đúng một đường: **dòng lệnh -> config -> container node -> backend Ethereum -> các service chạy**.\n\nĐường đó trả lời câu hỏi \"mọi thứ bắt đầu từ đâu?\". Mọi luồng khác trong repo đều móc vào các object dựng ở đây.\n\nMỗi bước neo bằng regex trên chữ ký hàm, không dùng số dòng, nên tour không hỏng khi code bị refactor.\n\nBấm mũi tên để nhảy vào điểm vào CLI."
+    },
+    {
+      "file": "cmd/geth/main.go",
+      "pattern": "func geth\\(ctx \\*cli\\.Context\\) error",
+      "title": "Điểm vào CLI",
+      "description": "`geth()` là hành động mặc định khi bạn chạy binary mà không kèm lệnh phụ.\n\nNó làm ba việc: dựng node, đăng ký service, khởi động tất cả. Để ý logic ở đây rất mỏng — `cmd/geth` chỉ là vỏ bọc quanh `node` và `eth`.\n\nMọi flag bạn truyền được đều khai báo trong `cmd/utils/flags.go`."
+    },
+    {
+      "file": "cmd/geth/config.go",
+      "pattern": "func makeFullNode",
+      "title": "Nơi node được ráp lại",
+      "description": "`makeFullNode` mới là chỗ đấu dây thật: nó biến flag cộng file TOML thành một `*node.Node` đã đăng ký đủ service.\n\nĐọc các lời gọi theo thứ tự — mỗi lời gọi đăng ký một hệ thống con (backend Ethereum, Engine API, GraphQL, ethstats, ...). Khi bạn thắc mắc \"tính năng X có bật mặc định không?\", câu trả lời nằm trong hàm này."
+    },
+    {
+      "file": "node/node.go",
+      "pattern": "func New\\(conf \\*Config\\) \\(\\*Node, error\\)",
+      "title": "Container tiến trình",
+      "description": "`node.Node` sở hữu mọi thứ một tiến trình cần và không biết gì về Ethereum: thư mục dữ liệu, keystore, p2p server, các endpoint RPC.\n\nNó biết cách start/stop một danh sách `Lifecycle` theo đúng thứ tự. Đó chính là điểm mở rộng — `eth.Ethereum` chỉ là một lifecycle trong số đó."
+    },
+    {
+      "file": "eth/backend.go",
+      "pattern": "func New\\(stack \\*node\\.Node, config \\*ethconfig\\.Config\\)",
+      "title": "Backend Ethereum — hàm dài nhất bạn nên đọc",
+      "description": "Đây là nơi chain thật sự được ráp. Cuộn hết hàm này một lần, đọc chậm. Theo thứ tự nó dựng:\n\n- chain database (kèm freezer cho block cũ)\n- genesis / chain config\n- `core.BlockChain`\n- các transaction pool (legacy + blob)\n- handler p2p (protocol `eth` và `snap`, downloader, fetcher)\n- miner (dựng payload)\n- các API backend\n\nBiết từng thứ đó là gì thì bạn biết geth. Còn lại là chi tiết."
+    },
+    {
+      "file": "eth/catalyst/api.go",
+      "pattern": "func Register\\(stack \\*node\\.Node, backend \\*eth\\.Ethereum\\) error",
+      "title": "Engine API được đăng ký ở đây",
+      "description": "Chỗ này đăng ký namespace `engine_*` lên cổng có xác thực (8551, bảo vệ bằng JWT).\n\nSau Merge, đây là cách node biết chain nào là chuẩn: consensus client gọi vào, geth tuân theo. Không thành phần nào bên trong geth tự chọn head.\n\nTour 02 đi theo chuyện xảy ra khi một payload đi qua cánh cửa này."
+    },
+    {
+      "file": "node/node.go",
+      "pattern": "func \\(n \\*Node\\) Start\\(\\) error",
+      "title": "Mọi thứ khởi động ở đây",
+      "description": "`Start` mở các endpoint mạng, rồi chạy từng lifecycle theo đúng thứ tự đăng ký. Lỗi ở bất kỳ đâu sẽ tháo ngược những cái đã chạy.\n\nChính vì thứ tự này mà thứ tự đăng ký trong `makeFullNode` có ý nghĩa."
+    },
+    {
+      "file": "cmd/geth/main.go",
+      "pattern": "func startNode",
+      "title": "Rồi nó chờ",
+      "description": "Sau khi khởi động, `startNode` mở khóa account nếu được yêu cầu, đấu nối console, và chặn lại cho tới khi bị ngắt.\n\nTừ giây phút này tiến trình chạy theo sự kiện: message p2p, lời gọi RPC, và lệnh Engine API điều khiển mọi thứ."
+    },
+    {
+      "title": "Đi tiếp",
+      "description": "Bạn đã thấy bộ khung. Giờ chọn luồng bạn thật sự quan tâm:\n\n- **Tour 02 — Nhập block**: chuyện gì xảy ra khi một block tới.\n- `ARCHITECTURE.md` ở gốc repo (hoặc `docs/dev/vi/architecture.md`): bản đồ mã đầy đủ và sáu luồng chính.\n- `docs/dev/vi/start-here.md`: \"tôi muốn sửa X, bắt đầu ở đâu?\"\n\nMẹo: `go doc ./eth` và `go doc ./node` hiện tài liệu package ngay trong terminal, không cần mạng."
+    }
+  ]
+}

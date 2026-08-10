@@ -1,0 +1,87 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "02 · Block import (EN)",
+  "description": "One block, from the consensus client's `engine_newPayload` call all the way down to bytes on disk. The single most useful path in this repo.",
+  "steps": [
+    {
+      "title": "What this tour covers",
+      "description": "A block arrives. Ten steps later it is either the new head or rejected as invalid.\n\nThis is the path where every consensus bug lives, and the path most pull requests touch. Take it slowly.\n\nRecommended: finish **Tour 01 — Node startup** first, so the objects here are familiar."
+    },
+    {
+      "file": "eth/catalyst/api.go",
+      "pattern": "func \\(api \\*ConsensusAPI\\) newPayload\\(",
+      "title": "The block enters through the Engine API",
+      "description": "The consensus client hands us a payload and asks: is this valid?\n\nBefore executing anything, geth checks the parent. If we do not have it, the answer is `SYNCING` and sync kicks in instead — that is the branch that starts the downloader.\n\nOtherwise the payload is turned into a `types.Block` and pushed into the chain."
+    },
+    {
+      "file": "core/blockchain.go",
+      "pattern": "func \\(bc \\*BlockChain\\) InsertChain",
+      "title": "InsertChain — the public door",
+      "description": "The exported entry point. It takes a slice of blocks, checks they are contiguous, then hands off to the unexported `insertChain`.\n\nBlocks also arrive here from sync and from the `fetcher` — the Engine API is not the only caller."
+    },
+    {
+      "file": "core/blockchain.go",
+      "pattern": "func \\(bc \\*BlockChain\\) insertChain",
+      "title": "insertChain — the real work",
+      "description": "The long one. Read it in three parts:\n\n1. **Positioning** — is the parent our current head, a known ancestor, or a side chain? This is where reorg logic begins.\n2. **The loop** — for each block: verify, execute, validate, write.\n3. **Bookkeeping** — events, metrics, and the state of the chain head.\n\nAlmost every \"bad block\" report is diagnosed inside this function."
+    },
+    {
+      "file": "core/block_validator.go",
+      "pattern": "func \\(v \\*BlockValidator\\) ValidateBody",
+      "title": "Cheap checks first",
+      "description": "Before spending CPU on execution, geth checks what is verifiable from the block alone: the transaction root, the uncle/withdrawal rules, blob limits.\n\nHeader verification (difficulty, gas limit, base fee, timestamps) happens through `consensus.Engine` — post-Merge that is `consensus/beacon`."
+    },
+    {
+      "file": "core/state_processor.go",
+      "pattern": "func \\(p \\*StateProcessor\\) Process",
+      "title": "Execution: the state transition",
+      "description": "The heart of the client. Order matters and is worth memorising:\n\n1. **Pre-execution system calls** — beacon root and parent block hash contracts.\n2. **Every transaction, in order** — each one applied against the same `StateDB`.\n3. **Post-execution** — withdrawal, consolidation and deposit request queues.\n\nOut comes the receipt list, the gas used, and the logs — everything the header claims."
+    },
+    {
+      "file": "core/state_processor.go",
+      "pattern": "func ApplyTransactionWithEVM",
+      "title": "One transaction",
+      "description": "Per transaction: build the message, take a state snapshot, run it, then build the receipt.\n\nThe snapshot is what makes a failed transaction harmless — the state rolls back but the gas is still charged, and the receipt records the failure."
+    },
+    {
+      "file": "core/vm/evm.go",
+      "pattern": "func \\(evm \\*EVM\\) Call\\(",
+      "title": "Into the EVM",
+      "description": "`Call` handles value transfer, precompiles, and the 63/64 gas rule for nested calls. It is also where the depth limit is enforced.\n\nIts siblings — `CallCode`, `DelegateCall`, `StaticCall`, `Create` — sit right below and differ mostly in which context they keep."
+    },
+    {
+      "file": "core/vm/interpreter.go",
+      "pattern": "func \\(evm \\*EVM\\) Run\\(",
+      "title": "The opcode loop",
+      "description": "This is the whole virtual machine: fetch opcode, look it up in the jump table, charge gas, execute, repeat until STOP, RETURN, REVERT or an error.\n\nEverything the EVM can do is a table entry in `jump_table.go`. Fork differences are applied to that table by `eips.go` — that is why fork gating is a table edit, not an `if` in the loop."
+    },
+    {
+      "file": "core/block_validator.go",
+      "pattern": "func \\(v \\*BlockValidator\\) ValidateState",
+      "title": "The moment of truth",
+      "description": "Now geth compares what it computed against what the block claims: state root, receipt root, gas used, logs bloom.\n\n**This is where consensus bugs surface.** If your state root does not match, the mistake happened somewhere in execution — start reading backwards from here."
+    },
+    {
+      "file": "core/blockchain.go",
+      "pattern": "func \\(bc \\*BlockChain\\) writeBlockAndSetHead",
+      "title": "Accept the block",
+      "description": "The block is valid, so it gets written and (usually) becomes the new head. If the block belongs to a different branch, this is where the reorg happens.\n\nAfterwards a `ChainHeadEvent` is published — that single event resets the transaction pool, wakes the miner, and feeds log filters."
+    },
+    {
+      "file": "core/state/statedb.go",
+      "pattern": "func \\(s \\*StateDB\\) Commit\\(",
+      "title": "State leaves memory",
+      "description": "`Commit` flushes dirty accounts and storage into tries, computes the final root, and produces the node set to persist.\n\nAbove this line, state is revertible. Below it, it is not."
+    },
+    {
+      "file": "triedb/database.go",
+      "pattern": "func \\(db \\*Database\\) Update\\(",
+      "title": "And lands in the trie database",
+      "description": "`triedb` takes the new nodes and layers them on top of the previous state root — as diff layers in `pathdb` (the default), or ref-counted nodes in `hashdb`.\n\nOnly later, when layers are flushed, do these bytes reach `ethdb/pebble` through the key schema in `core/rawdb`."
+    },
+    {
+      "title": "You have seen the whole path",
+      "description": "Engine API -> InsertChain -> validate -> execute -> validate again -> write -> trie -> disk.\n\nWhere to go next:\n\n- `ARCHITECTURE.md` — the other five flows (transaction lifecycle, sync, RPC, state storage, CL loop).\n- `docs/dev/en/learning-path.md` — week 4 turns this tour into exercises.\n- Try it live: write a test using `core/chain_makers.go`, corrupt one state root, and watch step 10 reject it."
+    }
+  ]
+}

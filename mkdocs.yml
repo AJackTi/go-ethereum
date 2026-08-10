@@ -1,0 +1,115 @@
+site_name: go-ethereum developer handbook
+site_description: >-
+  Offline-first, bilingual (EN/VI) guide to reading, navigating and changing the go-ethereum codebase.
+site_url: https://ajackti.github.io/go-ethereum/
+site_author: AJackTi
+
+repo_url: https://github.com/AJackTi/go-ethereum
+repo_name: AJackTi/go-ethereum
+edit_uri: edit/master/docs/dev/
+
+docs_dir: docs/dev
+site_dir: site
+
+# The handbook is written to be read straight from the working tree. This file only adds a
+# published website on top of it; the Markdown files stay the source of truth.
+# Build:  mkdocs serve            (local preview)
+#         mkdocs build            (site/)
+#         OFFLINE=true mkdocs build   (site/ that works from file:// — zip and hand it around)
+hooks:
+  - docs/dev/_hooks.py
+
+exclude_docs: |
+  README.md
+  _hooks.py
+  __pycache__/
+
+theme:
+  name: material
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - navigation.footer
+    - content.code.copy
+    - content.action.edit
+    - search.highlight
+    - search.suggest
+    - toc.follow
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: folder
+      fallback_to_default: true
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: vi
+          name: Tiếng Việt
+          build: true
+          nav_translations:
+            Start here: Bắt đầu ở đây
+            Architecture: Kiến trúc
+            I want to change X: Tôi muốn sửa X
+            Learning path: Lộ trình học
+            Decisions (ADR): Quyết định (ADR)
+  # Enabled only for the offline bundle: moves the search index into a JS file so the site
+  # also works when opened directly from disk.
+  - offline:
+      enabled: !ENV [OFFLINE, false]
+
+nav:
+  - Start here: index.md
+  - Architecture: architecture.md
+  - I want to change X: start-here.md
+  - Learning path: learning-path.md
+  - Decisions (ADR):
+      - adr/index.md
+      - adr/0001-record-architecture-decisions.md
+      - adr/0002-offline-first-bilingual-dev-docs.md
+      - adr/0003-publish-handbook-to-github-pages.md
+      - adr/0000-template.md
+
+extra:
+  # extra.alternate (the language switcher) is generated per page by the i18n plugin — setting it
+  # by hand here would only produce links that ignore which page the reader is on.
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/AJackTi/go-ethereum

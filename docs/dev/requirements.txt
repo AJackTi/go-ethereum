@@ -1,0 +1,13 @@
+# Toolchain for the developer handbook website (docs/dev + ARCHITECTURE.md).
+# Only needed to *publish* the handbook — reading it requires nothing but a text editor.
+#
+#   python3 -m venv .venv && .venv/bin/pip install -r docs/dev/requirements.txt
+#   .venv/bin/mkdocs serve                     # preview on http://127.0.0.1:8000
+#   .venv/bin/mkdocs build --strict            # site/
+#   OFFLINE=true .venv/bin/mkdocs build --strict   # bundle that works from file://
+#
+# Verified with these versions; upper bounds guard against MkDocs 2.0, which drops the plugin
+# system these docs rely on.
+mkdocs>=1.6,<2.0
+mkdocs-material>=9.7,<10.0
+mkdocs-static-i18n>=1.3,<2.0
