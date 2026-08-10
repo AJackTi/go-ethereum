@@ -1,0 +1,69 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "04 · Sync (EN)",
+  "description": "How a node with an empty database catches up: headers backwards from the head, bodies and receipts in parallel, and state downloaded by range instead of walked node by node.",
+  "steps": [
+    {
+      "title": "What this tour covers",
+      "description": "Post-merge sync runs **backwards**, which is the part that surprises everyone. The consensus client says \"this is the head\"; geth fills in headers going back towards genesis, downloads bodies and receipts in parallel, and — in snap mode — grabs recent state directly instead of executing history.\n\nTwo lanes run at once. Follow the header lane first, then the state lane."
+    },
+    {
+      "file": "eth/downloader/beaconsync.go",
+      "pattern": "func \\(d \\*Downloader\\) BeaconSync\\(",
+      "title": "The consensus client sets the target",
+      "description": "There is no \"find the longest chain\" logic anywhere in this repo any more. Sync starts because the CL announced a head via the Engine API and geth did not have its parent.\n\nThe head and the finalized block are handed to the skeleton, which owns the header chain."
+    },
+    {
+      "file": "eth/downloader/skeleton.go",
+      "pattern": "func \\(s \\*skeleton\\) Sync\\(",
+      "title": "The skeleton",
+      "description": "The skeleton is a set of header *subchains* growing downwards from announced heads. It exists because the CL can change its mind: a new head may extend the current subchain, or start a fresh one that later merges into it.\n\nIt is persisted, so restarting a node does not restart the download."
+    },
+    {
+      "file": "eth/downloader/skeleton.go",
+      "pattern": "func \\(s \\*skeleton\\) sync\\(",
+      "title": "Filling headers backwards",
+      "description": "The loop that asks peers for header batches, links each batch to the one below, and extends the subchain towards the block geth already has.\n\nWhen a subchain reaches a known block, the header chain is complete and the body/receipt backfill can run against it."
+    },
+    {
+      "file": "eth/downloader/downloader.go",
+      "pattern": "func \\(d \\*Downloader\\) spawnSync\\(",
+      "title": "Fetchers run concurrently",
+      "description": "Headers, bodies, receipts and block access lists are each fetched by their own goroutine — see the `fetchers_concurrent_*.go` files.\n\nEach fetcher tracks per-peer throughput (`p2p/msgrate`) and sizes its requests so a slow peer cannot stall the pipeline."
+    },
+    {
+      "file": "eth/downloader/queue.go",
+      "pattern": "func \\(q \\*queue\\) Results\\(",
+      "title": "Reassembling in order",
+      "description": "Parts arrive out of order from many peers. The queue holds them until a block is complete, then releases blocks strictly in order to whoever consumes them.\n\nThe cap on unreleased results is also the memory ceiling for sync."
+    },
+    {
+      "file": "eth/downloader/downloader.go",
+      "pattern": "func \\(d \\*Downloader\\) processSnapSyncContent\\(",
+      "title": "Where snap sync differs from full",
+      "description": "Full sync executes every block from genesis. Snap sync picks a **pivot** near the head, downloads the state at that pivot directly, and only executes blocks after it.\n\nThis function keeps the pivot up to date while the download runs — and that moving target is exactly why the heal phase exists."
+    },
+    {
+      "file": "eth/protocols/snap/sync.go",
+      "pattern": "func \\(s \\*syncer\\) Sync\\(",
+      "title": "The state lane",
+      "description": "The snap syncer's job: reconstruct the entire state trie at the pivot root without walking it node by node.\n\nIt splits the account key space into ranges and hands each range to a peer, tracking progress so a restart resumes rather than begins again."
+    },
+    {
+      "file": "eth/protocols/snap/sync.go",
+      "pattern": "func \\(s \\*syncer\\) assignAccountTasks\\(",
+      "title": "Ranges, not nodes",
+      "description": "A peer is asked for \"all accounts between key A and key B\" and answers with the leaves plus a **range proof**. The proof is what makes the answer trustworthy without having the trie already.\n\nThe trie is rebuilt locally from those leaves with `StackTrie` — sequential, no random reads."
+    },
+    {
+      "file": "eth/protocols/snap/sync.go",
+      "pattern": "func \\(s \\*syncer\\) assignTrienodeHealTasks\\(",
+      "title": "Healing: the part that feels slow",
+      "description": "The chain moved while the state was downloading, so parts of what was fetched are already stale. Healing walks the trie from the current root and requests exactly the nodes that are missing or outdated.\n\nThis is why snap sync progress crawls near the end: the ranges finished, and this phase is repairing the difference."
+    },
+    {
+      "title": "Then it becomes an ordinary node",
+      "description": "Once the state at the pivot is complete and healed, geth executes blocks from the pivot forward like any full node, `eth/handler.go` re-enables the features that were disabled while syncing, and the transaction pool starts accepting again.\n\nOperational view of everything here — flags, symptoms, what to check — is in `docs/dev/en/run-a-node.md`."
+    }
+  ]
+}

@@ -27,6 +27,8 @@ exclude_docs: |
 theme:
   name: material
   language: en
+  logo: assets/logo.svg
+  favicon: assets/favicon.svg
   icon:
     repo: fontawesome/brands/github
   palette:
@@ -72,7 +74,11 @@ markdown_extensions:
       alternate_style: true
 
 plugins:
-  - search
+  # lunr has no Vietnamese stemmer, so `vi` falls back to the default tokenizer. Widening the
+  # separator to include the punctuation these pages actually use keeps Vietnamese queries usable;
+  # matching stays literal rather than stemmed.
+  - search:
+      separator: '[\s​\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;'
   - i18n:
       docs_structure: folder
       fallback_to_default: true
@@ -84,22 +90,42 @@ plugins:
         - locale: vi
           name: Tiếng Việt
           build: true
+          # Only the section headings need translating — page titles come from each language's own
+          # H1, so a Vietnamese page already carries its Vietnamese title.
           nav_translations:
-            Start here: Bắt đầu ở đây
-            Architecture: Kiến trúc
-            I want to change X: Tôi muốn sửa X
-            Learning path: Lộ trình học
+            First steps: Bước đầu
+            Understand the code: Hiểu codebase
+            Change the code: Sửa codebase
+            Run and build on it: Vận hành và xây trên nó
             Decisions (ADR): Quyết định (ADR)
+  # "Last updated" per page, taken from git history. CI must check out with fetch-depth: 0,
+  # otherwise every page falls back to the build date.
+  - git-revision-date-localized:
+      type: date
+      enable_creation_date: false
+      fallback_to_build_date: true
+      enabled: !ENV [GIT_DATES, true]
+
   # Enabled only for the offline bundle: moves the search index into a JS file so the site
   # also works when opened directly from disk.
   - offline:
       enabled: !ENV [OFFLINE, false]
 
 nav:
-  - Start here: index.md
-  - Architecture: architecture.md
-  - I want to change X: start-here.md
-  - Learning path: learning-path.md
+  - index.md
+  - First steps:
+      - getting-started.md
+      - glossary.md
+  - Understand the code:
+      - architecture.md
+      - learning-path.md
+  - Change the code:
+      - start-here.md
+      - debugging.md
+  - Run and build on it:
+      - run-a-node.md
+      - using-geth.md
+      - tools.md
   - Decisions (ADR):
       - adr/index.md
       - adr/0001-record-architecture-decisions.md

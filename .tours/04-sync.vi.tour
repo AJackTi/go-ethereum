@@ -1,0 +1,69 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "04 · Đồng bộ (VI)",
+  "description": "Node có database rỗng bắt kịp chain thế nào: header đi lùi từ head, body và receipt tải song song, và state tải theo range thay vì đi bộ từng node.",
+  "steps": [
+    {
+      "title": "Tour này đi qua cái gì",
+      "description": "Sau Merge, sync chạy **ngược**, và đó là chỗ ai cũng bất ngờ. Consensus client nói \"đây là head\"; geth điền header lùi dần về phía genesis, tải body và receipt song song, và — ở chế độ snap — lấy thẳng state gần đây thay vì chạy lại lịch sử.\n\nHai làn chạy cùng lúc. Theo làn header trước, rồi tới làn state."
+    },
+    {
+      "file": "eth/downloader/beaconsync.go",
+      "pattern": "func \\(d \\*Downloader\\) BeaconSync\\(",
+      "title": "Consensus client đặt đích",
+      "description": "Trong repo này không còn logic \"tìm chuỗi dài nhất\" ở đâu nữa. Sync bắt đầu vì CL công bố một head qua Engine API mà geth không có block cha của nó.\n\nHead và block finalized được giao cho skeleton, thành phần sở hữu chuỗi header."
+    },
+    {
+      "file": "eth/downloader/skeleton.go",
+      "pattern": "func \\(s \\*skeleton\\) Sync\\(",
+      "title": "Skeleton",
+      "description": "Skeleton là tập các **subchain** header mọc xuống dưới từ các head được công bố. Nó tồn tại vì CL có thể đổi ý: một head mới có thể nối dài subchain hiện tại, hoặc mở subchain mới rồi sau đó nhập vào.\n\nSkeleton được lưu xuống đĩa, nên restart node không phải tải lại từ đầu."
+    },
+    {
+      "file": "eth/downloader/skeleton.go",
+      "pattern": "func \\(s \\*skeleton\\) sync\\(",
+      "title": "Điền header đi lùi",
+      "description": "Vòng lặp xin peer từng lô header, nối lô này vào lô dưới, và kéo dài subchain về phía block mà geth đã có.\n\nKhi một subchain chạm tới block đã biết, chuỗi header hoàn tất và việc backfill body/receipt có thể chạy dựa trên nó."
+    },
+    {
+      "file": "eth/downloader/downloader.go",
+      "pattern": "func \\(d \\*Downloader\\) spawnSync\\(",
+      "title": "Các fetcher chạy song song",
+      "description": "Header, body, receipt và block access list mỗi loại do một goroutine riêng tải — xem các file `fetchers_concurrent_*.go`.\n\nMỗi fetcher theo dõi thông lượng từng peer (`p2p/msgrate`) và co giãn kích thước request để một peer chậm không làm nghẽn cả dây chuyền."
+    },
+    {
+      "file": "eth/downloader/queue.go",
+      "pattern": "func \\(q \\*queue\\) Results\\(",
+      "title": "Lắp lại đúng thứ tự",
+      "description": "Các mảnh về không theo thứ tự, từ nhiều peer. Queue giữ chúng tới khi một block đủ, rồi nhả block ra theo đúng thứ tự cho bên tiêu thụ.\n\nGiới hạn số kết quả chưa nhả cũng chính là trần bộ nhớ của quá trình sync."
+    },
+    {
+      "file": "eth/downloader/downloader.go",
+      "pattern": "func \\(d \\*Downloader\\) processSnapSyncContent\\(",
+      "title": "Snap khác full ở đâu",
+      "description": "Full sync chạy lại mọi block từ genesis. Snap sync chọn một **pivot** gần head, tải thẳng state tại pivot đó, và chỉ thực thi những block sau nó.\n\nHàm này giữ pivot luôn cập nhật trong lúc tải — và chính cái đích di động đó là lý do phải có pha heal."
+    },
+    {
+      "file": "eth/protocols/snap/sync.go",
+      "pattern": "func \\(s \\*syncer\\) Sync\\(",
+      "title": "Làn state",
+      "description": "Việc của snap syncer: dựng lại toàn bộ state trie tại root của pivot mà không phải đi bộ từng node.\n\nNó chia không gian khóa account thành các range, giao mỗi range cho một peer, và ghi lại tiến độ để restart thì tiếp tục chứ không bắt đầu lại."
+    },
+    {
+      "file": "eth/protocols/snap/sync.go",
+      "pattern": "func \\(s \\*syncer\\) assignAccountTasks\\(",
+      "title": "Theo range, không theo node",
+      "description": "Peer được hỏi \"tất cả account giữa khóa A và khóa B\" và trả về các lá kèm một **range proof**. Chính proof đó khiến câu trả lời đáng tin dù ta chưa có trie.\n\nTrie được dựng lại tại chỗ từ các lá đó bằng `StackTrie` — tuần tự, không đọc ngẫu nhiên."
+    },
+    {
+      "file": "eth/protocols/snap/sync.go",
+      "pattern": "func \\(s \\*syncer\\) assignTrienodeHealTasks\\(",
+      "title": "Heal: đoạn cảm giác chậm nhất",
+      "description": "Chain đã đi tiếp trong lúc state đang tải, nên một phần thứ đã lấy về đã cũ. Pha heal đi trên trie từ root hiện tại và xin đúng những node còn thiếu hoặc đã lỗi thời.\n\nĐó là lý do phần trăm snap sync bò rất chậm ở đoạn cuối: các range đã xong, pha này đang vá phần chênh lệch."
+    },
+    {
+      "title": "Rồi nó thành một node bình thường",
+      "description": "Khi state tại pivot đã đủ và đã vá xong, geth thực thi block từ pivot trở đi như mọi full node, `eth/handler.go` bật lại các tính năng bị tắt lúc sync, và transaction pool bắt đầu nhận lại.\n\nGóc nhìn vận hành cho toàn bộ phần này — flag, triệu chứng, kiểm tra gì — nằm ở `docs/dev/vi/run-a-node.md`."
+    }
+  ]
+}

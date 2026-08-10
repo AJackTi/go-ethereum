@@ -1,4 +1,4 @@
-# KIẾN TRÚC
+# Kiến trúc
 
 > **Ngôn ngữ / Language:** Tiếng Việt · [English (bản gốc)](../../../ARCHITECTURE.md)
 > **Phạm vi:** bản đồ mã nguồn cho người cần sửa repo này. Không phải đặc tả giao thức.
@@ -182,8 +182,12 @@ Checklist đầy đủ trước commit: `AGENTS.md`.
 
 ## Đi tiếp
 
+- Chưa từng build geth: [`getting-started.md`](getting-started.md)
 - Tra theo công việc ("tôi muốn sửa X, bắt đầu ở đâu?"): [`start-here.md`](start-here.md)
 - Lộ trình học có cấu trúc: [`learning-path.md`](learning-path.md)
+- Triển khai và vận hành node: [`run-a-node.md`](run-a-node.md)
+- Test, tracer, profiling, delve: [`debugging.md`](debugging.md)
+- Thuật ngữ (Anh ↔ Việt): [`glossary.md`](glossary.md)
 - Walkthrough trong editor: [`.tours/`](../../../.tours)
 - Quyết định và lý do: [`../adr/`](../adr)
 - Tài liệu API offline: `go doc ./core/vm` hoặc `pkgsite -http :8080` (xem `../README.md`)

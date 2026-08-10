@@ -1,0 +1,81 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "06 · Lưu trữ state (VI)",
+  "description": "Một lệnh `SSTORE` thành byte trên đĩa: StateDB, journal, trie, các tầng triedb, sơ đồ khóa, pebble và freezer.",
+  "steps": [
+    {
+      "title": "Tour này đi qua cái gì",
+      "description": "Có bốn lớp nằm giữa một opcode ghi storage slot và một byte hạ cánh xuống đĩa. Mỗi lớp là một đánh đổi, và gộp lại chúng giải thích pruning, vì sao archive node khổng lồ, và vì sao `pathdb` rollback được còn `hashdb` thì không.\n\nĐây là tour nên đi trước khi đụng vào bất cứ thứ gì trong `trie/` hay `triedb/`."
+    },
+    {
+      "file": "core/state/statedb.go",
+      "pattern": "func \\(s \\*StateDB\\) SetState\\(",
+      "title": "EVM ghi ở đây",
+      "description": "`SSTORE` kết thúc ở hàm này. Không băm gì, không đụng đĩa — giá trị nằm vào `stateObject` trong RAM của account đó, và giá trị cũ được ghi lại để có thể hoàn tác.\n\nMọi thứ phía trên ranh giới commit đều rẻ và đảo ngược được. Đó là toàn bộ thiết kế."
+    },
+    {
+      "file": "core/state/journal.go",
+      "pattern": "func \\(j \\*journal\\) revertToSnapshot\\(",
+      "title": "Undo mà không cần copy cả thế giới",
+      "description": "Mỗi thay đổi ghi thêm một mục mô tả cách tự đảo ngược. Snapshot chỉ là một chỉ số trong danh sách đó; revert là chạy ngược các mục.\n\nĐây là thứ khiến một `CALL` thất bại trở nên vô hại: thay đổi của frame bị hoàn tác, gas vẫn bị trừ, và bên gọi đi tiếp. Copy toàn bộ state cho mỗi call frame thì không thể kham nổi."
+    },
+    {
+      "file": "core/state/statedb.go",
+      "pattern": "func \\(s \\*StateDB\\) Finalise\\(",
+      "title": "Kết thúc một transaction",
+      "description": "Giữa các transaction, journal bị bỏ, account tự hủy bị xóa và account rỗng bị dọn. Tập dữ liệu bẩn được mang sang transaction kế trong cùng block.\n\n`IntermediateRoot` — ngay bên dưới — là `Finalise` cộng thêm băm, đó là cách sinh ra state root sau từng transaction để debug."
+    },
+    {
+      "file": "core/state/statedb.go",
+      "pattern": "func \\(s \\*StateDB\\) Commit\\(",
+      "title": "Ranh giới",
+      "description": "Kết thúc block. Account và storage bẩn được ghi vào trie, trie được băm để ra state root cuối, và tập node kết quả được chuyển xuống dưới.\n\nTrên dòng này state revert được. Dưới dòng này thì không."
+    },
+    {
+      "file": "trie/trie.go",
+      "pattern": "func \\(t \\*Trie\\) Update\\(",
+      "title": "Vào trie",
+      "description": "Khóa là đường đi theo nibble; chèn một giá trị sẽ tách và tạo node dọc đường đó. Có một account trie, cộng một storage trie cho mỗi contract có storage.\n\nLớp bọc `StateTrie` trong `secure_trie.go` băm khóa trước khi chèn — chính điều đó ngăn kẻ tấn công chế khóa làm trie sâu bất thường."
+    },
+    {
+      "file": "trie/trie.go",
+      "pattern": "func \\(t \\*Trie\\) Commit\\(",
+      "title": "Băm để ra root",
+      "description": "Mọi node bẩn được encode và băm từ dưới lên; hash gốc cam kết cho toàn bộ state. Đổi một số dư chỉ băm lại đường từ lá đó lên gốc — cỡ vài node, không phải cả trie.\n\nĐầu ra là một `trienode.NodeSet`: đúng những node đã thay đổi."
+    },
+    {
+      "file": "triedb/database.go",
+      "pattern": "func \\(db \\*Database\\) Update\\(",
+      "title": "Xếp tầng các node mới",
+      "description": "`triedb` nhận tập node đó và xếp lên trên state root cha. Chưa có gì ghi xuống đĩa — block gần đây vẫn có thể bị reorg mất, flush ngay là ghi phí công.\n\nDùng scheme nào được quyết lúc khởi động: `hashdb` (khóa theo hash node) hay `pathdb` (khóa theo path, mặc định)."
+    },
+    {
+      "file": "triedb/pathdb/difflayer.go",
+      "pattern": "func newDiffLayer\\(",
+      "title": "Diff layer, và vì sao pathdb tua ngược được",
+      "description": "Mỗi block thành một diff layer trong RAM nằm trên disk layer. Đọc thì đi xuống theo chồng tầng cho tới khi có tầng chứa node đó.\n\nVì `pathdb` còn ghi **state history** — giá trị trước đó tại mỗi path — nó dựng lại được state root cũ bằng cách tua ngược. `hashdb` khóa theo hash node và đếm tham chiếu, cắt tỉa kém và không tua ngược được. Đúng khác biệt đó khiến `pathdb` thành mặc định."
+    },
+    {
+      "file": "core/rawdb/schema.go",
+      "pattern": "headerPrefix\\s*=",
+      "title": "Sơ đồ khóa",
+      "description": "Database là một kho key-value phẳng, nên mỗi loại dữ liệu được gán một prefix một byte: `h` cho header, `b` cho body, `r` cho receipt, `a` cho account snapshot, v.v.\n\nMọi thao tác đọc/ghi các khóa này đều đi qua accessor ở các file `accessors_*.go` bên cạnh. Thêm prefix mới là phải kiểm tra nó không đụng cái nào — đụng nhau là hỏng dữ liệu âm thầm."
+    },
+    {
+      "file": "core/rawdb/chain_freezer.go",
+      "pattern": "func \\(f \\*chainFreezer\\) freeze\\(",
+      "title": "Block cũ dọn ra ngoài",
+      "description": "Block ở xa head không bao giờ bị đọc ngẫu nhiên, nên một vòng lặp nền chuyển chúng khỏi kho key-value sang freezer: file phẳng chỉ ghi thêm, đánh chỉ mục theo số block.\n\nNhờ vậy database nóng đủ nhỏ cho tải đọc ngẫu nhiên — và đó là lý do `geth db inspect` báo cáo hai vùng lưu trữ rất khác nhau."
+    },
+    {
+      "file": "ethdb/pebble/pebble.go",
+      "pattern": "func \\(d \\*Database\\) Put\\(",
+      "title": "Đáy",
+      "description": "Lớp cuối: một kho key-value dạng LSM-tree. `ethdb` giữ interface cực nhỏ — get, put, delete, batch, iterate — nên backend thay được (`pebble` mặc định, `leveldb`, `memorydb` trong test) mà mọi lớp bên trên không hay biết.\n\nVà đó là trọn con đường: EVM → StateDB → trie → triedb → rawdb → pebble."
+    },
+    {
+      "title": "Nó giải thích được gì",
+      "description": "- **Pruning**: chỉ giữ state history gần đây; `--history.state` quyết định giữ bao nhiêu.\n- **Archive node**: giữ state ở mọi block nghĩa là không bao giờ bỏ tầng — đĩa gấp nhiều lần.\n- **Truy vấn block cũ chậm**: state không được lưu theo từng block, nó được chạy lại (xem tour 05).\n- **Vì sao kill cứng gây đau**: các tầng bẩn chưa flush phải được phục hồi ở lần khởi động sau.\n\nMặt vận hành của tất cả những thứ này: `docs/dev/vi/run-a-node.md`. Chi tiết theo package: `docs/dev/vi/architecture.md`."
+    }
+  ]
+}

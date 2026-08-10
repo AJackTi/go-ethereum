@@ -12,9 +12,15 @@ trong cây mã, đọc bằng editor nào cũng được.
 
 | | English | Tiếng Việt |
 | --- | --- | --- |
+| Never built geth before | [`en/getting-started.md`](en/getting-started.md) | [`vi/getting-started.md`](vi/getting-started.md) |
 | Code map — what lives where | [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) | [`vi/architecture.md`](vi/architecture.md) |
 | "I want to change X" | [`en/start-here.md`](en/start-here.md) | [`vi/start-here.md`](vi/start-here.md) |
 | Learning path, 8 weeks | [`en/learning-path.md`](en/learning-path.md) | [`vi/learning-path.md`](vi/learning-path.md) |
+| Deploy and operate a node | [`en/run-a-node.md`](en/run-a-node.md) | [`vi/run-a-node.md`](vi/run-a-node.md) |
+| Tests, tracers, pprof, delve | [`en/debugging.md`](en/debugging.md) | [`vi/debugging.md`](vi/debugging.md) |
+| Build *on* geth (ethclient, abigen) | [`en/using-geth.md`](en/using-geth.md) | [`vi/using-geth.md`](vi/using-geth.md) |
+| The 13 tools in `cmd/` | [`en/tools.md`](en/tools.md) | [`vi/tools.md`](vi/tools.md) |
+| Terminology, EN ↔ VI | [`en/glossary.md`](en/glossary.md) | [`vi/glossary.md`](vi/glossary.md) |
 | Why things are the way they are | [`adr/`](adr) | [`adr/`](adr) (English only) |
 | Guided walkthrough in the editor | [`../../.tours/`](../../.tours) | [`../../.tours/`](../../.tours) |
 
@@ -105,7 +111,17 @@ walkthrough inside VS Code — offline, no service, no AI.
 2. Open the CodeTour panel in the Explorer sidebar and pick a tour.
 3. `Ctrl/Cmd+Right` walks forward; each step jumps to the exact code and explains it.
 
-Tours in this repo are suffixed by language: `*.en.tour`, `*.vi.tour`.
+Tours in this repo are suffixed by language: `*.en.tour`, `*.vi.tour`. Six flows are covered, each
+in both languages:
+
+| Tour | Path it walks |
+| --- | --- |
+| 01 · Node startup | CLI → config → `node.Node` → `eth.Ethereum` → running services |
+| 02 · Block import | `engine_newPayload` → `InsertChain` → EVM → state root check → disk |
+| 03 · Transaction lifecycle | RPC/peer → txpool → gossip → miner → block → pool reset |
+| 04 · Sync | CL head → skeleton → concurrent fetchers → snap ranges → heal |
+| 05 · An RPC request | transport → routing → reflection → `ethapi` → backend → state |
+| 06 · State storage | `SSTORE` → journal → trie → triedb layers → rawdb → pebble/freezer |
 
 **Steps use `pattern` (a regex), not `line`.** That is deliberate: line numbers rot with every
 refactor, regexes on function signatures do not. Keep it that way when you add steps.

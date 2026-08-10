@@ -33,8 +33,12 @@ GENERATED_BANNER = (
 # Links in the root ARCHITECTURE.md are relative to the repository root.
 ARCHITECTURE_REWRITES = [
     ("docs/dev/vi/architecture.md", "../vi/architecture.md"),
+    ("docs/dev/en/getting-started.md", "getting-started.md"),
     ("docs/dev/en/start-here.md", "start-here.md"),
     ("docs/dev/en/learning-path.md", "learning-path.md"),
+    ("docs/dev/en/run-a-node.md", "run-a-node.md"),
+    ("docs/dev/en/debugging.md", "debugging.md"),
+    ("docs/dev/en/glossary.md", "glossary.md"),
     ("docs/dev/adr/", "../adr/index.md"),
     ("docs/dev/adr", "../adr/index.md"),
     ("docs/dev/README.md", "index.md"),

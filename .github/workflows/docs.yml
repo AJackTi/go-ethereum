@@ -35,7 +35,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Action majors are kept current so the runner does not fall back to the deprecated Node 20.
+      # fetch-depth: 0 gives the git-revision-date plugin the history it needs for "last updated";
+      # with a shallow clone every page would silently show the build date instead.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v7
         with:

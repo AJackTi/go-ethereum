@@ -10,12 +10,19 @@ thật. Không cần internet, không cần AI agent để dùng bất cứ ph�
 
 ## Bắt đầu từ đâu?
 
+**Chưa từng build geth?** Bắt đầu ở [Bắt đầu từ số không](getting-started.md) — một giờ từ terminal
+trắng tới một node gửi transaction được. Mọi thứ bên dưới giả định bạn đã qua bước đó.
+
 <div class="grid cards" markdown>
+
+- :material-rocket-launch: **[Bắt đầu từ số không](getting-started.md)**
+
+    Chuẩn bị máy, `make geth`, một chain `--dev` dùng xong bỏ, transaction đầu tiên, và những lỗi
+    ai cũng gặp trong giờ đầu.
 
 - :material-map: **[Kiến trúc](architecture.md)**
 
-    Bản đồ mã nguồn. Bốn lớp, điểm vào theo từng câu hỏi, mỗi package làm gì, sáu luồng quan
-    trọng. Đọc cái này trước.
+    Bản đồ mã nguồn. Bốn lớp, điểm vào theo từng câu hỏi, mỗi package làm gì, sáu luồng quan trọng.
 
 - :material-wrench: **[Tôi muốn sửa X](start-here.md)**
 
@@ -25,6 +32,29 @@ thật. Không cần internet, không cần AI agent để dùng bất cứ ph�
 - :material-school: **[Lộ trình học](learning-path.md)**
 
     Tám tuần từ `make geth` tới pull request đầu tiên, kèm bài tập và checkpoint tự trả lời được.
+
+- :material-server-network: **[Vận hành node](run-a-node.md)**
+
+    Tài nguyên cần bao nhiêu, chế độ sync, ghép với consensus client, cổng, systemd, Docker, giám
+    sát và bảo trì.
+
+- :material-bug: **[Test và debug](debugging.md)**
+
+    Triệu chứng nào dùng công cụ nào: bộ test, tracer, pprof, delve, và cách đọc một block bị từ chối.
+
+- :material-code-braces: **[Dùng geth từ code của bạn](using-geth.md)**
+
+    `ethclient`, binding `abigen`, một chain thật ngay trong test, subscription — xây *trên* geth
+    thay vì sửa geth.
+
+- :material-toolbox: **[Công cụ](tools.md)**
+
+    Mười ba binary trong `cmd/`: `evm`, `devp2p`, `abigen`, `rlpdump`, `era`, `workload` và phần
+    còn lại.
+
+- :material-translate: **[Thuật ngữ](glossary.md)**
+
+    Mọi từ chặn chân người mới, Anh và Việt, mỗi từ trỏ tới đoạn code khiến nó thành cụ thể.
 
 - :material-file-document-multiple: **[Quyết định](../adr/index.md)**
 
@@ -43,6 +73,10 @@ Hai walkthrough click-through nằm sẵn trong repo tại
 | --- | --- |
 | **01 · Khởi động node** | Dòng lệnh → config → `node.Node` → `eth.Ethereum` → các service chạy |
 | **02 · Nhập block** | `engine_newPayload` → `InsertChain` → EVM → kiểm state root → byte trên đĩa |
+| **03 · Vòng đời transaction** | RPC hoặc peer → txpool → gossip → miner → block → pool reset |
+| **04 · Đồng bộ** | head từ CL → skeleton → fetcher song song → range snap → heal |
+| **05 · Một request RPC** | transport → định tuyến → reflection → `ethapi` → backend → state lịch sử |
+| **06 · Lưu trữ state** | `SSTORE` → journal → trie → tầng triedb → rawdb → pebble và freezer |
 
 Cài extension VS Code `vsls-contrib.codetour` một lần, mở panel CodeTour, chọn tour. Sau khi cài
 xong nó chạy hoàn toàn offline — không service, không model.

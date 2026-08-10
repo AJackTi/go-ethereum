@@ -10,12 +10,20 @@ tree is the source of truth. No internet and no AI agent is required to use any 
 
 ## Where do I start?
 
+**Never built geth before?** Start with [Getting started](getting-started.md) — one hour from an
+empty terminal to a node you can send transactions to. Everything below assumes you got that far.
+
 <div class="grid cards" markdown>
+
+- :material-rocket-launch: **[Getting started](getting-started.md)**
+
+    Prerequisites, `make geth`, a throwaway `--dev` chain, your first transaction, and the errors
+    everyone hits in the first hour.
 
 - :material-map: **[Architecture](architecture.md)**
 
     The code map. Four layers, entry points per question, what every package does, the six flows
-    that matter. Read this first.
+    that matter.
 
 - :material-wrench: **[I want to change X](start-here.md)**
 
@@ -26,6 +34,31 @@ tree is the source of truth. No internet and no AI agent is required to use any 
 
     Eight weeks from `make geth` to a first pull request, with exercises and a checkpoint you can
     answer alone.
+
+- :material-server-network: **[Run a node](run-a-node.md)**
+
+    Sizing, sync modes, pairing with a consensus client, ports, systemd, Docker, monitoring and
+    maintenance.
+
+- :material-bug: **[Testing and debugging](debugging.md)**
+
+    Which tool for which symptom: the test suites, tracers, pprof, delve, and how to read a
+    rejected block.
+
+- :material-code-braces: **[Using geth from your own code](using-geth.md)**
+
+    `ethclient`, `abigen` bindings, a real chain inside your tests, subscriptions — building *on*
+    geth rather than changing it.
+
+- :material-toolbox: **[Tools](tools.md)**
+
+    The thirteen binaries in `cmd/`: `evm`, `devp2p`, `abigen`, `rlpdump`, `era`, `workload` and
+    the rest.
+
+- :material-translate: **[Glossary](glossary.md)**
+
+    Every term that blocks a newcomer, in English and Vietnamese, each pointing at the code where
+    it becomes concrete.
 
 - :material-file-document-multiple: **[Decisions](../adr/index.md)**
 
@@ -44,6 +77,10 @@ Two click-through walkthroughs ship in the repo under
 | --- | --- |
 | **01 · Node startup** | Command line → config → `node.Node` → `eth.Ethereum` → running services |
 | **02 · Block import** | `engine_newPayload` → `InsertChain` → EVM → state root check → bytes on disk |
+| **03 · Transaction lifecycle** | RPC or peer → txpool → gossip → miner → block → pool reset |
+| **04 · Sync** | CL head → skeleton → concurrent fetchers → snap ranges → heal |
+| **05 · An RPC request** | transport → routing → reflection → `ethapi` → backend → historical state |
+| **06 · State storage** | `SSTORE` → journal → trie → triedb layers → rawdb → pebble and freezer |
 
 Install the VS Code extension `vsls-contrib.codetour` once, open the CodeTour panel, pick a tour.
 After the install it works entirely offline — no service, no model.

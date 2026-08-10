@@ -1,4 +1,4 @@
-# ARCHITECTURE
+# Architecture
 
 > **Language / Ngôn ngữ:** English (canonical) · [Tiếng Việt](docs/dev/vi/architecture.md)
 > **Scope:** a code map for people who need to change this repo. Not a protocol spec.
@@ -153,8 +153,12 @@ Full pre-commit checklist: `AGENTS.md`.
 
 ## Where to go next
 
+- Never built geth before: [`docs/dev/en/getting-started.md`](docs/dev/en/getting-started.md)
 - Task-oriented index ("I want to change X, where do I start?"): [`docs/dev/en/start-here.md`](docs/dev/en/start-here.md)
 - Structured learning path: [`docs/dev/en/learning-path.md`](docs/dev/en/learning-path.md)
+- Deploying and operating a node: [`docs/dev/en/run-a-node.md`](docs/dev/en/run-a-node.md)
+- Tests, tracers, profiling, delve: [`docs/dev/en/debugging.md`](docs/dev/en/debugging.md)
+- Terminology (EN ↔ VI): [`docs/dev/en/glossary.md`](docs/dev/en/glossary.md)
 - In-editor guided tours: [`.tours/`](.tours)
 - Decisions and their reasons: [`docs/dev/adr/`](docs/dev/adr)
 - Offline API reference: `go doc ./core/vm` or `pkgsite -http :8080` (see `docs/dev/README.md`)

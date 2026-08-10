@@ -1,0 +1,75 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "03 · Transaction lifecycle (EN)",
+  "description": "One transaction, from `eth_sendRawTransaction` through the pool and the gossip network into a block — and out again when the block lands.",
+  "steps": [
+    {
+      "title": "What this tour covers",
+      "description": "A transaction passes through three systems that barely know about each other: the **RPC layer**, the **transaction pool**, and the **miner**. They are joined by interfaces, which is why reading them separately is easier than reading them as one flow.\n\nBy the end you will know why transactions get stuck, why the pool empties after every block, and what decides ordering inside a block."
+    },
+    {
+      "file": "internal/ethapi/api.go",
+      "pattern": "func \\(api \\*TransactionAPI\\) SendRawTransaction\\(",
+      "title": "Entry from the outside world",
+      "description": "The RPC handler does almost nothing: decode the RLP bytes into a `types.Transaction` and hand it on.\n\nNotice what is *not* here — no signature check, no balance check, no nonce logic. Validation belongs to the pool, so a transaction arriving from a peer goes through exactly the same checks."
+    },
+    {
+      "file": "internal/ethapi/api.go",
+      "pattern": "func SubmitTransaction\\(",
+      "title": "The shared submit path",
+      "description": "Everything that injects a transaction locally converges here: the raw path above, `eth_sendTransaction`, and the console.\n\nThis is also where a locally submitted transaction is marked as local — local transactions survive pool eviction that would drop a remote one with the same price."
+    },
+    {
+      "file": "core/txpool/txpool.go",
+      "pattern": "func \\(p \\*TxPool\\) Add\\(",
+      "title": "The pool is only a router",
+      "description": "`TxPool` itself stores nothing. It looks at each transaction, asks each subpool whether it will take that type (`Filter`), and forwards it.\n\nToday there are two subpools: `legacypool` for ordinary transactions and `blobpool` for blob transactions, which are far too large to keep in memory."
+    },
+    {
+      "file": "core/txpool/validation.go",
+      "pattern": "func ValidateTransaction\\(",
+      "title": "Checks that need no state",
+      "description": "Size, gas limit, chain ID, signature, intrinsic gas, fee caps, blob rules. Everything answerable from the transaction and the current header alone.\n\nSplitting validation this way matters: these checks are cheap and run first, so a spam transaction is rejected before anything touches the state."
+    },
+    {
+      "file": "core/txpool/legacypool/legacypool.go",
+      "pattern": "func \\(pool \\*LegacyPool\\) add\\(",
+      "title": "Pending or queued",
+      "description": "The state-dependent half: does the sender have the balance, and is the nonce the next one?\n\n- Nonce exactly next → **pending** (executable now).\n- Nonce in the future → **queued**, waiting for the gap to be filled.\n- Same nonce as an existing transaction → replacement, but only if the price bump clears the threshold.\n\n`txpool_content` in the console shows both lanes. A transaction \"stuck\" forever is almost always queued behind a missing nonce."
+    },
+    {
+      "file": "eth/handler.go",
+      "pattern": "func \\(h \\*handler\\) BroadcastTransactions\\(",
+      "title": "Telling the network",
+      "description": "Accepted transactions are gossiped. Note the split: a few peers receive the full transaction body, the rest only receive the hash and ask for the body if they want it.\n\nThat asymmetry is what stops transaction gossip from squaring the bandwidth cost as the peer count grows."
+    },
+    {
+      "file": "eth/fetcher/tx_fetcher.go",
+      "pattern": "func \\(f \\*TxFetcher\\) Notify\\(",
+      "title": "The same door, from a peer",
+      "description": "The other side of that protocol: a peer announces hashes, and this scheduler decides which ones to request, from whom, and how to avoid asking three peers for the same body.\n\nWhatever it retrieves goes into `TxPool.Add` — the identical path the RPC used."
+    },
+    {
+      "file": "core/txpool/txpool.go",
+      "pattern": "func \\(p \\*TxPool\\) Pending\\(",
+      "title": "The miner comes shopping",
+      "description": "The block builder does not receive pushed transactions; it pulls, with a filter (base fee, blob fee, whether it wants lazy-resolved bodies).\n\n`LazyTransaction` matters here: the builder can sort by price without paying to deserialise every transaction body it will never use."
+    },
+    {
+      "file": "miner/worker.go",
+      "pattern": "func \\(miner \\*Miner\\) fillTransactions\\(",
+      "title": "Filling a block",
+      "description": "Plain and blob transactions are collected separately, then ordered by effective tip — what the proposer actually earns at this block's base fee — while respecting per-sender nonce order.\n\nThis function is where MEV lives: whoever controls this ordering controls the value extractable from the block."
+    },
+    {
+      "file": "miner/worker.go",
+      "pattern": "func \\(miner \\*Miner\\) commitTransactions\\(",
+      "title": "Committing until something runs out",
+      "description": "Transactions are applied one by one until the gas limit, the blob limit, or the interrupt fires (the consensus client asked for the payload).\n\nA transaction that fails here is skipped, not fatal — the block simply moves on to the next one."
+    },
+    {
+      "title": "And then the pool resets",
+      "description": "When the block is imported, `core.BlockChain` publishes a `ChainHeadEvent`. The pool subscribes to it, drops everything now mined, re-checks balances and nonces against the new state, and promotes queued transactions that just became executable.\n\nThat reset loop is the source of most \"my transaction disappeared\" reports.\n\nNext: **tour 04 — sync**, or read `docs/dev/en/architecture.md` for the flows this one touches."
+    }
+  ]
+}

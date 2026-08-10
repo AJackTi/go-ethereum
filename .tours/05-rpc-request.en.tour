@@ -1,0 +1,69 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "05 · An RPC request (EN)",
+  "description": "One `eth_call` from the socket to the answer: transport, routing, reflection, the API layer, the backend, and historical state.",
+  "steps": [
+    {
+      "title": "What this tour covers",
+      "description": "The shortest path in the repo, and the one you will work in most if you add features people can see.\n\nIt is worth knowing because it explains the four places you must touch to add an RPC method — and why an `eth_call` against an old block can be expensive."
+    },
+    {
+      "file": "node/rpcstack.go",
+      "pattern": "func \\(h \\*httpServer\\) ServeHTTP\\(",
+      "title": "Transport first",
+      "description": "geth runs several HTTP servers: the public one (8545), the authenticated Engine API one (8551), plus WebSocket and IPC.\n\nBefore any JSON is parsed, this layer enforces host and origin checks. Those are what stop a web page on another site from driving your node through the browser."
+    },
+    {
+      "file": "node/jwt_handler.go",
+      "pattern": "func newJWTHandler\\(",
+      "title": "The authenticated port",
+      "description": "Requests to 8551 pass through here first: a valid JWT signed with the shared secret, with a fresh `iat` claim, or the request is rejected.\n\nThis is the whole security model of the Engine API — no JWT, no consensus client, and the node never advances."
+    },
+    {
+      "file": "rpc/http.go",
+      "pattern": "func \\(s \\*Server\\) ServeHTTP\\(",
+      "title": "Into the JSON-RPC server",
+      "description": "geth ships its own JSON-RPC implementation rather than using a library. Here the body is read under limits (batch size, body size) and handed to the codec.\n\nThose limits are configurable and exist to stop one client from occupying the node with a single enormous batch."
+    },
+    {
+      "file": "rpc/handler.go",
+      "pattern": "func \\(h \\*handler\\) handleMsg\\(",
+      "title": "One message, or a batch",
+      "description": "The handler sorts what it received: a call, a notification, a subscription, or a batch of them. Batches run concurrently with a cap.\n\nSubscriptions are the interesting branch — they keep a channel open and push results later, which is how `eth_subscribe` works over WebSocket."
+    },
+    {
+      "file": "rpc/handler.go",
+      "pattern": "func \\(h \\*handler\\) handleCall\\(",
+      "title": "Finding the method",
+      "description": "`eth_call` is split into namespace `eth` and method `call`, then looked up in the service registry.\n\nErrors are shaped here too: an unknown method, bad parameters, and an error returned by the method itself all produce different JSON-RPC error codes."
+    },
+    {
+      "file": "rpc/service.go",
+      "pattern": "func newCallback\\(",
+      "title": "Reflection is why registration is so simple",
+      "description": "When a package registers an API object, every exported method with a suitable signature becomes an RPC method automatically — argument types are decoded from JSON by reflection, a leading `context.Context` is supplied, a trailing `error` becomes the JSON-RPC error.\n\nThat is why adding a method is \"write a Go method\" and not \"write a Go method plus a schema entry\"."
+    },
+    {
+      "file": "internal/ethapi/api.go",
+      "pattern": "func \\(api \\*BlockChainAPI\\) Call\\(",
+      "title": "The method itself",
+      "description": "Now real work: resolve which block to run against, apply any state or block overrides, cap the gas, and execute the message in an EVM that never writes anything back.\n\nNotice it depends only on the `Backend` interface — this package has no idea whether the node behind it is a full node, a light client, or a test harness."
+    },
+    {
+      "file": "eth/api_backend.go",
+      "pattern": "func \\(b \\*EthAPIBackend\\) StateAndHeaderByNumberOrHash\\(",
+      "title": "The backend adapter",
+      "description": "The implementation of that interface for a real node. It translates \"block 12345\" or \"latest\" or a hash into an actual header plus a `StateDB` positioned at that block.\n\nEvery method you add to the interface must be implemented here — and in the test backends too."
+    },
+    {
+      "file": "eth/state_accessor.go",
+      "pattern": "func \\(eth \\*Ethereum\\) stateAtBlock\\(",
+      "title": "Why old blocks are expensive",
+      "description": "A pruning node does not keep state for every historical block. To answer a query about an old one it starts from the nearest state it does have and **re-executes blocks forward** until it reaches the requested point.\n\nThat is the honest answer to \"why did my archive-style query time out\": it was not a lookup, it was a replay."
+    },
+    {
+      "title": "Adding your own method",
+      "description": "Four places, in this order:\n\n1. The method itself in `internal/ethapi/api.go` (or `eth/api_*.go` for `debug`/`admin`).\n2. Anything new it needs on the `Backend` interface in `internal/ethapi/backend.go`.\n3. The implementation in `eth/api_backend.go` — plus every other implementation, including test ones.\n4. `internal/web3ext/web3ext.go` so the JS console knows about it.\n\nThe task-level checklist is in `docs/dev/en/start-here.md`."
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "03 · Vòng đời transaction (VI)",
+  "description": "Một transaction, từ `eth_sendRawTransaction` qua pool và mạng gossip vào block — rồi rời pool khi block hạ cánh.",
+  "steps": [
+    {
+      "title": "Tour này đi qua cái gì",
+      "description": "Một transaction đi qua ba hệ thống gần như không biết nhau: **tầng RPC**, **transaction pool**, và **miner**. Chúng nối với nhau bằng interface, nên đọc riêng từng phần dễ hơn đọc như một luồng liền.\n\nHết tour bạn sẽ biết vì sao transaction bị kẹt, vì sao pool rỗng đi sau mỗi block, và cái gì quyết định thứ tự trong block."
+    },
+    {
+      "file": "internal/ethapi/api.go",
+      "pattern": "func \\(api \\*TransactionAPI\\) SendRawTransaction\\(",
+      "title": "Cửa vào từ thế giới bên ngoài",
+      "description": "Handler RPC gần như không làm gì: decode byte RLP thành `types.Transaction` rồi chuyển tiếp.\n\nĐể ý thứ **không** có ở đây — không kiểm chữ ký, không kiểm số dư, không xử nonce. Xác thực thuộc về pool, nhờ vậy transaction đến từ peer đi qua đúng những kiểm tra y hệt."
+    },
+    {
+      "file": "internal/ethapi/api.go",
+      "pattern": "func SubmitTransaction\\(",
+      "title": "Đường submit dùng chung",
+      "description": "Mọi thứ đưa transaction vào từ máy này đều hội tụ ở đây: đường raw ở trên, `eth_sendTransaction`, và console.\n\nĐây cũng là nơi transaction gửi tại chỗ được đánh dấu là local — transaction local sống sót qua các đợt dọn pool mà một transaction remote cùng mức giá sẽ bị loại."
+    },
+    {
+      "file": "core/txpool/txpool.go",
+      "pattern": "func \\(p \\*TxPool\\) Add\\(",
+      "title": "Pool chỉ là router",
+      "description": "Bản thân `TxPool` không lưu gì. Nó nhìn từng transaction, hỏi từng subpool xem có nhận loại đó không (`Filter`), rồi chuyển tiếp.\n\nHiện có hai subpool: `legacypool` cho transaction thường và `blobpool` cho blob transaction — loại quá lớn để giữ trong RAM."
+    },
+    {
+      "file": "core/txpool/validation.go",
+      "pattern": "func ValidateTransaction\\(",
+      "title": "Kiểm tra không cần state",
+      "description": "Kích thước, gas limit, chain ID, chữ ký, intrinsic gas, trần phí, luật blob. Tất cả những gì trả lời được chỉ từ transaction và header hiện tại.\n\nTách xác thực kiểu này rất quan trọng: các kiểm tra này rẻ và chạy trước, nên transaction spam bị loại trước khi có gì đó đụng tới state."
+    },
+    {
+      "file": "core/txpool/legacypool/legacypool.go",
+      "pattern": "func \\(pool \\*LegacyPool\\) add\\(",
+      "title": "Pending hay queued",
+      "description": "Nửa phụ thuộc state: người gửi có đủ số dư không, và nonce có phải là nonce kế tiếp không?\n\n- Nonce đúng kế tiếp → **pending** (thực thi được ngay).\n- Nonce ở tương lai → **queued**, chờ lấp chỗ trống.\n- Trùng nonce với transaction đang có → thay thế, nhưng chỉ khi mức tăng giá vượt ngưỡng.\n\n`txpool_content` trong console cho thấy cả hai hàng. Transaction \"kẹt\" mãi gần như luôn là queued sau một nonce còn thiếu."
+    },
+    {
+      "file": "eth/handler.go",
+      "pattern": "func \\(h \\*handler\\) BroadcastTransactions\\(",
+      "title": "Báo cho mạng",
+      "description": "Transaction được nhận sẽ được loan tin. Để ý sự chia đôi: vài peer nhận trọn nội dung transaction, số còn lại chỉ nhận hash và tự hỏi xin nội dung nếu muốn.\n\nChính sự bất đối xứng đó khiến chi phí băng thông không tăng theo bình phương khi số peer tăng."
+    },
+    {
+      "file": "eth/fetcher/tx_fetcher.go",
+      "pattern": "func \\(f \\*TxFetcher\\) Notify\\(",
+      "title": "Cùng cánh cửa, nhưng từ peer",
+      "description": "Phía bên kia của giao thức đó: peer thông báo hash, và bộ lập lịch này quyết định xin cái nào, xin ai, và làm sao tránh hỏi ba peer cùng một nội dung.\n\nThứ lấy về được đưa vào `TxPool.Add` — đúng con đường mà RPC đã dùng."
+    },
+    {
+      "file": "core/txpool/txpool.go",
+      "pattern": "func \\(p \\*TxPool\\) Pending\\(",
+      "title": "Miner đi chợ",
+      "description": "Bộ dựng block không được đẩy transaction tới; nó tự kéo về, kèm filter (base fee, blob fee, có cần nội dung đầy đủ hay không).\n\n`LazyTransaction` quan trọng ở đây: bộ dựng block sắp xếp theo giá mà không phải trả giá để giải mã nội dung của những transaction rốt cuộc không dùng."
+    },
+    {
+      "file": "miner/worker.go",
+      "pattern": "func \\(miner \\*Miner\\) fillTransactions\\(",
+      "title": "Nhét đầy một block",
+      "description": "Transaction thường và blob được gom riêng, rồi sắp theo effective tip — phần người đề xuất thực sự kiếm được ở base fee của block này — trong khi vẫn tôn trọng thứ tự nonce của từng người gửi.\n\nHàm này là chỗ MEV sinh ra: ai kiểm soát thứ tự ở đây thì kiểm soát giá trị moi được từ block."
+    },
+    {
+      "file": "miner/worker.go",
+      "pattern": "func \\(miner \\*Miner\\) commitTransactions\\(",
+      "title": "Commit tới khi hết chỗ",
+      "description": "Transaction được áp lần lượt cho tới khi hết gas limit, hết giới hạn blob, hoặc interrupt bắn (consensus client đã đòi payload).\n\nMột transaction lỗi ở đây thì bị bỏ qua, không phải lỗi chí mạng — block đơn giản đi tiếp sang cái kế."
+    },
+    {
+      "title": "Rồi pool reset",
+      "description": "Khi block được nhập, `core.BlockChain` phát `ChainHeadEvent`. Pool đăng ký sự kiện đó, bỏ hết những gì vừa lên block, kiểm lại số dư và nonce theo state mới, và đẩy lên những transaction queued vừa trở nên thực thi được.\n\nVòng reset đó là nguồn gốc của phần lớn báo cáo \"transaction của tôi biến mất\".\n\nTiếp theo: **tour 04 — sync**, hoặc đọc `docs/dev/vi/architecture.md` để thấy các luồng liên quan."
+    }
+  ]
+}

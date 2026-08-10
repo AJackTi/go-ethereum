@@ -1,0 +1,69 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "05 · Một request RPC (VI)",
+  "description": "Một `eth_call` từ socket tới câu trả lời: transport, định tuyến, reflection, tầng API, backend, và state lịch sử.",
+  "steps": [
+    {
+      "title": "Tour này đi qua cái gì",
+      "description": "Đường ngắn nhất trong repo, và cũng là đường bạn làm việc nhiều nhất nếu thêm tính năng mà người dùng nhìn thấy.\n\nĐáng biết vì nó giải thích bốn chỗ phải sửa khi thêm một RPC method — và vì sao `eth_call` trên block cũ lại tốn kém."
+    },
+    {
+      "file": "node/rpcstack.go",
+      "pattern": "func \\(h \\*httpServer\\) ServeHTTP\\(",
+      "title": "Transport trước đã",
+      "description": "geth chạy nhiều HTTP server: cái công khai (8545), cái Engine API có xác thực (8551), cộng WebSocket và IPC.\n\nTrước khi parse JSON, tầng này kiểm host và origin. Chính chúng ngăn một trang web ở nơi khác điều khiển node của bạn qua trình duyệt."
+    },
+    {
+      "file": "node/jwt_handler.go",
+      "pattern": "func newJWTHandler\\(",
+      "title": "Cổng có xác thực",
+      "description": "Request tới 8551 đi qua đây trước: phải có JWT hợp lệ ký bằng secret dùng chung, kèm claim `iat` còn mới, nếu không thì bị từ chối.\n\nĐó là toàn bộ mô hình bảo mật của Engine API — không JWT thì không có consensus client, và node không bao giờ tiến."
+    },
+    {
+      "file": "rpc/http.go",
+      "pattern": "func \\(s \\*Server\\) ServeHTTP\\(",
+      "title": "Vào JSON-RPC server",
+      "description": "geth tự viết implementation JSON-RPC thay vì dùng thư viện. Ở đây body được đọc trong giới hạn (kích thước batch, kích thước body) rồi giao cho codec.\n\nCác giới hạn đó cấu hình được và sinh ra để một client không thể chiếm cả node bằng một batch khổng lồ."
+    },
+    {
+      "file": "rpc/handler.go",
+      "pattern": "func \\(h \\*handler\\) handleMsg\\(",
+      "title": "Một message, hoặc một batch",
+      "description": "Handler phân loại thứ nhận được: một call, một notification, một subscription, hay một batch. Batch chạy song song có giới hạn.\n\nSubscription là nhánh thú vị — nó giữ kênh mở và đẩy kết quả về sau, đó chính là cách `eth_subscribe` hoạt động qua WebSocket."
+    },
+    {
+      "file": "rpc/handler.go",
+      "pattern": "func \\(h \\*handler\\) handleCall\\(",
+      "title": "Tìm method",
+      "description": "`eth_call` được tách thành namespace `eth` và method `call`, rồi tra trong registry dịch vụ.\n\nLỗi cũng được định hình ở đây: method không tồn tại, tham số sai, và lỗi do chính method trả về đều cho ra mã lỗi JSON-RPC khác nhau."
+    },
+    {
+      "file": "rpc/service.go",
+      "pattern": "func newCallback\\(",
+      "title": "Reflection khiến việc đăng ký đơn giản đến vậy",
+      "description": "Khi một package đăng ký object API, mọi method export có chữ ký phù hợp tự động trở thành RPC method — kiểu tham số được decode từ JSON bằng reflection, `context.Context` đứng đầu được cấp tự động, `error` đứng cuối thành lỗi JSON-RPC.\n\nVì vậy thêm method chỉ là \"viết một method Go\", không phải \"viết method Go cộng khai báo schema\"."
+    },
+    {
+      "file": "internal/ethapi/api.go",
+      "pattern": "func \\(api \\*BlockChainAPI\\) Call\\(",
+      "title": "Bản thân method",
+      "description": "Giờ mới là việc thật: xác định chạy trên block nào, áp các override state/block nếu có, chặn trần gas, và thực thi message trong một EVM không ghi lại gì.\n\nĐể ý nó chỉ phụ thuộc interface `Backend` — package này không biết phía sau là full node, light client, hay một bộ khung test."
+    },
+    {
+      "file": "eth/api_backend.go",
+      "pattern": "func \\(b \\*EthAPIBackend\\) StateAndHeaderByNumberOrHash\\(",
+      "title": "Adapter backend",
+      "description": "Implementation của interface đó cho một node thật. Nó dịch \"block 12345\" hay \"latest\" hay một hash thành header cụ thể kèm `StateDB` đặt đúng tại block đó.\n\nMọi method bạn thêm vào interface đều phải cài đặt ở đây — và ở cả các backend dùng trong test."
+    },
+    {
+      "file": "eth/state_accessor.go",
+      "pattern": "func \\(eth \\*Ethereum\\) stateAtBlock\\(",
+      "title": "Vì sao block cũ lại đắt",
+      "description": "Node có pruning không giữ state cho mọi block lịch sử. Để trả lời truy vấn về một block cũ, nó bắt đầu từ state gần nhất nó có rồi **chạy lại các block tiến lên** cho tới điểm được hỏi.\n\nĐó là câu trả lời thật thà cho \"vì sao truy vấn kiểu archive của tôi bị timeout\": đó không phải tra cứu, đó là chạy lại."
+    },
+    {
+      "title": "Thêm method của riêng bạn",
+      "description": "Bốn chỗ, theo thứ tự:\n\n1. Bản thân method trong `internal/ethapi/api.go` (hoặc `eth/api_*.go` cho `debug`/`admin`).\n2. Thứ mới nó cần trên interface `Backend` ở `internal/ethapi/backend.go`.\n3. Implementation trong `eth/api_backend.go` — cộng mọi implementation khác, gồm cả bản dùng trong test.\n4. `internal/web3ext/web3ext.go` để console JS biết method đó.\n\nChecklist ở mức công việc nằm trong `docs/dev/vi/start-here.md`."
+    }
+  ]
+}

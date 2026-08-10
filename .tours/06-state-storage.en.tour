@@ -1,0 +1,81 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "06 · State storage (EN)",
+  "description": "One `SSTORE` becoming bytes on disk: StateDB, journal, trie, triedb layers, the key schema, pebble and the freezer.",
+  "steps": [
+    {
+      "title": "What this tour covers",
+      "description": "Four layers sit between an opcode writing a storage slot and a byte landing on disk. Each layer is a tradeoff, and together they explain pruning, why archive nodes are enormous, and why `pathdb` can roll back while `hashdb` cannot.\n\nThis is the tour to take before touching anything in `trie/` or `triedb/`."
+    },
+    {
+      "file": "core/state/statedb.go",
+      "pattern": "func \\(s \\*StateDB\\) SetState\\(",
+      "title": "The EVM writes here",
+      "description": "`SSTORE` ends up in this function. Nothing is hashed and nothing touches disk — the value lands in the in-memory `stateObject` for that account, and the previous value is recorded so it can be undone.\n\nEverything above the commit boundary is cheap and reversible. That is the whole design."
+    },
+    {
+      "file": "core/state/journal.go",
+      "pattern": "func \\(j \\*journal\\) revertToSnapshot\\(",
+      "title": "Undo, without copying the world",
+      "description": "Every mutation appends an entry describing how to reverse itself. A snapshot is just an index into that list; reverting replays the entries backwards.\n\nThis is what makes a failed `CALL` harmless: the frame's changes are undone, gas is still charged, and the caller continues. Copying the state for every call frame would be unaffordable."
+    },
+    {
+      "file": "core/state/statedb.go",
+      "pattern": "func \\(s \\*StateDB\\) Finalise\\(",
+      "title": "End of a transaction",
+      "description": "Between transactions the journal is dropped, self-destructed accounts are removed and empty accounts are cleared. The dirty set carries forward to the next transaction in the same block.\n\n`IntermediateRoot` — just below — is `Finalise` plus hashing, which is how per-transaction state roots are produced for debugging."
+    },
+    {
+      "file": "core/state/statedb.go",
+      "pattern": "func \\(s \\*StateDB\\) Commit\\(",
+      "title": "The boundary",
+      "description": "End of the block. Dirty accounts and storage are written into tries, the tries are hashed to produce the final state root, and the resulting node set is handed downwards.\n\nAbove this line state is revertible. Below it, it is not."
+    },
+    {
+      "file": "trie/trie.go",
+      "pattern": "func \\(t \\*Trie\\) Update\\(",
+      "title": "Into the trie",
+      "description": "Keys are nibble paths; inserting a value splits and creates nodes along the path. There is one account trie, plus one storage trie per contract that has storage.\n\nThe `StateTrie` wrapper in `secure_trie.go` hashes keys before insertion — that is what stops an attacker from crafting keys that make the trie pathologically deep."
+    },
+    {
+      "file": "trie/trie.go",
+      "pattern": "func \\(t \\*Trie\\) Commit\\(",
+      "title": "Hashing produces the root",
+      "description": "Every dirty node is encoded and hashed bottom-up; the root hash commits to the entire state. Changing one balance rehashes only the path from that leaf to the root — roughly a handful of nodes, not the whole trie.\n\nOut comes a `trienode.NodeSet`: exactly the nodes that changed."
+    },
+    {
+      "file": "triedb/database.go",
+      "pattern": "func \\(db \\*Database\\) Update\\(",
+      "title": "Layering the new nodes",
+      "description": "`triedb` takes that node set and stacks it on top of the parent state root. Nothing is written to disk yet — recent blocks may still be reorged away, and flushing them immediately would be wasted writes.\n\nWhich scheme is in use is decided at startup: `hashdb` (keyed by node hash) or `pathdb` (keyed by path, the default)."
+    },
+    {
+      "file": "triedb/pathdb/difflayer.go",
+      "pattern": "func newDiffLayer\\(",
+      "title": "Diff layers, and why pathdb can rewind",
+      "description": "Each block becomes an in-memory diff layer over the disk layer. Reads walk down the stack until a layer has the node.\n\nBecause `pathdb` also records **state history** — the previous value at each path — it can reconstruct an older state root by unwinding. `hashdb` keys by node hash and reference-counts instead, which prunes badly and cannot rewind. That single difference is why `pathdb` is the default."
+    },
+    {
+      "file": "core/rawdb/schema.go",
+      "pattern": "headerPrefix\\s*=",
+      "title": "The key schema",
+      "description": "The database is one flat key-value store, so every category gets a one-byte prefix: `h` for headers, `b` for bodies, `r` for receipts, `a` for account snapshots, and so on.\n\nEvery read and write of these keys goes through an accessor in the neighbouring `accessors_*.go`. Adding a prefix means checking it collides with nothing — a clash corrupts data silently."
+    },
+    {
+      "file": "core/rawdb/chain_freezer.go",
+      "pattern": "func \\(f \\*chainFreezer\\) freeze\\(",
+      "title": "Old blocks move out",
+      "description": "Blocks far behind the head are never randomly accessed, so a background loop migrates them out of the key-value store into the freezer: append-only flat files, indexed by block number.\n\nThat keeps the hot database small enough for its random-access workload — and it is why `geth db inspect` reports two very different storage areas."
+    },
+    {
+      "file": "ethdb/pebble/pebble.go",
+      "pattern": "func \\(d \\*Database\\) Put\\(",
+      "title": "The bottom",
+      "description": "The last layer: an LSM-tree key-value store. `ethdb` keeps the interface tiny — get, put, delete, batch, iterate — so the backend can be swapped (`pebble` by default, `leveldb`, `memorydb` in tests) without any layer above noticing.\n\nAnd that is the whole path: EVM → StateDB → trie → triedb → rawdb → pebble."
+    },
+    {
+      "title": "What this explains",
+      "description": "- **Pruning**: only recent state history is kept; `--history.state` sets how much.\n- **Archive nodes**: keeping state at every block means never dropping layers — many times the disk.\n- **Slow queries on old blocks**: state is not stored per block, it is replayed (see tour 05).\n- **Why a hard kill hurts**: dirty layers not yet flushed have to be recovered on the next start.\n\nOperational side of all this: `docs/dev/en/run-a-node.md`. Package detail: `docs/dev/en/architecture.md`."
+    }
+  ]
+}
