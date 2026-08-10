@@ -78,6 +78,11 @@ markdown_extensions:
   - toc:
       permalink: true
   - pymdownx.details
+  # `:material-rocket-launch:` and friends on the home page are Material icon shortcodes. Without
+  # this they render as literal text — the icon set is bundled with the theme, nothing is fetched.
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite

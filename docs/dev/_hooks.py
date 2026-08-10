@@ -1,6 +1,6 @@
 """MkDocs hooks for the developer handbook.
 
-Two jobs:
+Three jobs:
 
 1. `ARCHITECTURE.md` lives at the repository root, which is the convention every reader (and most
    tooling) expects. MkDocs only sees files under `docs_dir`, so before the build we copy it to
@@ -15,11 +15,16 @@ Two jobs:
    breaking one view to serve the other, we rewrite the handful of known link targets at build
    time.
 
+3. That generated copy has no git history of its own, so the revision-date plugin would stamp it
+   with the build date and have it claim to change on every rebuild. The last hook puts the source
+   file's real commit date back.
+
 Nothing here modifies hand-written files.
 """
 
 import pathlib
 import re
+import subprocess
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 GITHUB_BLOB = "https://github.com/AJackTi/go-ethereum/blob/master"
@@ -112,3 +117,54 @@ def on_page_markdown(markdown, page, config, files):
     return _rewrite_cross_language(
         markdown, page.file.abs_src_path or "", config.use_directory_urls
     )
+
+
+def _last_commit_timestamp(path: str):
+    """Unix timestamp of the last commit touching `path`, or None outside a usable checkout."""
+    try:
+        result = subprocess.run(
+            ["git", "log", "-1", "--format=%ct", "--", path],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    stamp = result.stdout.strip()
+    return int(stamp) if result.returncode == 0 and stamp.isdigit() else None
+
+
+def on_page_context(context, page, config, nav):
+    """Stamp the generated architecture page with its *source* file's date.
+
+    The page is written at build time and git-ignored, so it has no history of its own — the
+    revision-date plugin falls back to the build date and the page claims to have been updated
+    every time anything triggers a rebuild. The honest date is the one on `ARCHITECTURE.md`.
+
+    Degrades to the plugin's own behaviour if the plugin is absent or git is unavailable.
+    """
+    if (page.file.src_path or "").replace("\\", "/").rsplit("/", 1)[-1] != "architecture.md":
+        return context
+    if not page.meta.get("git_revision_date_localized"):
+        return context  # the plugin is disabled; nothing to correct
+    if page.file.abs_src_path and pathlib.Path(page.file.abs_src_path).is_relative_to(
+        pathlib.Path(config.docs_dir) / "vi"
+    ):
+        return context  # the Vietnamese page is hand-written and tracked; its date is real
+
+    timestamp = _last_commit_timestamp("ARCHITECTURE.md")
+    if timestamp is None:
+        return context
+    try:
+        from mkdocs_git_revision_date_localized_plugin.dates import get_date_formats
+    except ImportError:
+        return context
+
+    plugin = config.plugins.get("git-revision-date-localized")
+    locale = getattr(page.file, "locale", None) or "en"
+    time_zone = plugin.config.get("timezone", "UTC") if plugin else "UTC"
+    page.meta["git_revision_date_localized"] = get_date_formats(
+        timestamp, locale=locale, time_zone=time_zone
+    )["date"]
+    return context
