@@ -191,7 +191,7 @@ func (b *testBackend) StateAtTransaction(ctx context.Context, block *types.Block
 		if _, err := core.ApplyMessage(evm, msg, nil); err != nil {
 			return nil, vm.BlockContext{}, nil, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
 		}
-		statedb.Finalise(evm.ChainConfig().IsEIP158(block.Number()))
+		statedb.Finalise(evm.GetRules())
 	}
 	return nil, vm.BlockContext{}, nil, nil, fmt.Errorf("transaction index %d out of range for block %#x", txIndex, block.Hash())
 }
@@ -1387,14 +1387,14 @@ func TestTraceBlockWithBasefee(t *testing.T) {
 	t.Parallel()
 	accounts := newAccounts(1)
 	target := common.HexToAddress("0x1111111111111111111111111111111111111111")
+	alloc := core.SystemContractAllocs()
+	alloc[accounts[0].addr] = types.Account{Balance: big.NewInt(1 * params.Ether)}
+	alloc[target] = types.Account{Nonce: 1, Code: []byte{
+		byte(vm.BASEFEE), byte(vm.STOP),
+	}}
 	genesis := &core.Genesis{
 		Config: params.AllDevChainProtocolChanges,
-		Alloc: types.GenesisAlloc{
-			accounts[0].addr: {Balance: big.NewInt(1 * params.Ether)},
-			target: {Nonce: 1, Code: []byte{
-				byte(vm.BASEFEE), byte(vm.STOP),
-			}},
-		},
+		Alloc:  alloc,
 	}
 	genBlocks := 1
 	signer := types.HomesteadSigner{}
